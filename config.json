@@ -1,0 +1,15 @@
+{
+  "drugs": {
+    "Trastuzumab": { "usdPrice": 45000, "kesPrice": 5850000 },
+    "Pertuzumab": { "usdPrice": 62000, "kesPrice": 8060000 },
+    "Sotorasib": { "usdPrice": 125000, "kesPrice": 16250000 }
+  },
+  "exchangeRate": 130,
+  "proteins": {
+    "TP53": {
+      "uniprotId": "P04637",
+      "structureUrl": "https://alphafold.ebi.ac.uk/files/P04637.pdb"
+    }
+  },
+  "lastUpdated": "2025-12-31"
+}
