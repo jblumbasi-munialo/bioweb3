@@ -22,7 +22,7 @@
 <div class="container" style="margin-top: 80px;">
     <div class="text-center mb-4">
         <h1 class="display-4 fw-bold">🧬 Decentralized Bioinformatics</h1>
-        <p class="lead">Search protein → Auto‑fetch structure → Dock drugs → Earn BIO</p>
+        <p class="lead">Search any protein → Auto‑fetch structure → Dock drugs → Earn BIO</p>
     </div>
 
     <div class="row mb-4">
@@ -80,10 +80,20 @@
                     <div class="card">
                         <div class="card-header"><i class="fas fa-search"></i> Search Protein (UniProt)</div>
                         <div class="card-body">
-                            <label>Protein name (e.g., TP53, BRCA1, KRAS)</label>
-                            <input type="text" id="proteinName" class="form-control" placeholder="TP53" value="TP53">
+                            <!-- NEW: General search box -->
+                            <label class="fw-bold mt-2">🔍 Search for any protein (e.g., breast cancer, kinase, TP53)</label>
+                            <div class="input-group mb-3">
+                                <input type="text" id="generalSearch" class="form-control" placeholder="e.g., breast cancer, p53, BRCA1, insulin...">
+                                <button class="btn btn-primary" onclick="searchGeneralProtein()" type="button">Search</button>
+                            </div>
+                            <hr>
+
+                            <!-- Existing search by protein name -->
+                            <label class="fw-bold">Or, search by specific protein name</label>
+                            <input type="text" id="proteinName" class="form-control mt-1" placeholder="e.g., TP53" value="TP53">
                             <button class="btn btn-primary mt-2" onclick="searchUniProt()">Search & Load Structure</button>
-                            <div id="structResult" class="result-box mt-2" style="display:none"></div>
+
+                            <div id="structResult" class="result-box mt-3" style="display:none"></div>
                             <div id="uniprotLink" class="mt-2 small"></div>
                         </div>
                     </div>
