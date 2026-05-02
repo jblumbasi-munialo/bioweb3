@@ -22,7 +22,7 @@
 <div class="container" style="margin-top: 80px;">
     <div class="text-center mb-4">
         <h1 class="display-4 fw-bold">🧬 Decentralized Bioinformatics</h1>
-        <p class="lead">Sequence analysis · Structure prediction · Docking · Blockchain</p>
+        <p class="lead">Search protein → Auto‑fetch structure → Dock drugs → Earn BIO</p>
     </div>
 
     <div class="row mb-4">
@@ -51,14 +51,14 @@
     </ul>
 
     <div class="tab-content">
-        <!-- Sequence tab -->
+        <!-- Sequence analysis tab -->
         <div class="tab-pane fade show active" id="seq">
             <div class="row">
                 <div class="col-md-6">
                     <div class="card">
-                        <div class="card-header">DNA/Protein Analysis</div>
+                        <div class="card-header"><i class="fas fa-dna"></i> DNA/Protein Analysis</div>
                         <div class="card-body">
-                            <textarea id="seqInput" class="form-control" rows="4" placeholder="Paste sequence (DNA or protein)"></textarea>
+                            <textarea id="seqInput" class="form-control" rows="4" placeholder="Paste nucleotide or protein sequence"></textarea>
                             <button class="btn btn-primary mt-2" onclick="analyzeSeq()">Analyze</button>
                             <div id="seqResult" class="result-box mt-2" style="display:none"></div>
                         </div>
@@ -73,24 +73,27 @@
             </div>
         </div>
 
-        <!-- AlphaFold structure tab -->
+        <!-- AlphaFold / UniProt search tab -->
         <div class="tab-pane fade" id="structure">
             <div class="row">
                 <div class="col-md-6">
                     <div class="card">
-                        <div class="card-header">Predicted Structure (AlphaFold)</div>
+                        <div class="card-header"><i class="fas fa-search"></i> Search Protein (UniProt)</div>
                         <div class="card-body">
-                            <label>UniProt ID</label>
-                            <input type="text" id="uniprot" class="form-control" placeholder="e.g., P04637" value="P04637">
-                            <button class="btn btn-primary mt-2" onclick="predictStructure()">Predict</button>
+                            <label>Protein name (e.g., TP53, BRCA1, KRAS)</label>
+                            <input type="text" id="proteinName" class="form-control" placeholder="TP53" value="TP53">
+                            <button class="btn btn-primary mt-2" onclick="searchUniProt()">Search & Load Structure</button>
                             <div id="structResult" class="result-box mt-2" style="display:none"></div>
+                            <div id="uniprotLink" class="mt-2 small"></div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="card">
-                        <div class="card-header">3D Viewer</div>
-                        <div class="card-body"><div id="viewer3d" style="height: 350px;"></div></div>
+                        <div class="card-header"><i class="fas fa-cube"></i> 3D Structure Viewer</div>
+                        <div class="card-body">
+                            <div id="viewer3d" style="height: 350px;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -99,7 +102,7 @@
         <!-- Docking tab -->
         <div class="tab-pane fade" id="docking">
             <div class="card">
-                <div class="card-header">Molecular Docking</div>
+                <div class="card-header"><i class="fas fa-capsules"></i> Molecular Docking</div>
                 <div class="card-body">
                     <button class="btn btn-primary" onclick="runDock()">Run docking on current structure</button>
                     <div id="dockResult" class="result-box mt-2" style="display:none"></div>
@@ -111,7 +114,7 @@
         <!-- Blockchain ledger -->
         <div class="tab-pane fade" id="blockchain">
             <div class="card">
-                <div class="card-header">Immutable Research Ledger</div>
+                <div class="card-header"><i class="fas fa-link"></i> Immutable Research Ledger</div>
                 <div class="card-body">
                     <button class="btn btn-primary mb-2" onclick="recordCurrent()">Record current result</button>
                     <div id="ledger" style="max-height: 300px; overflow-y: auto;"></div>
@@ -122,7 +125,7 @@
         <!-- Pricing KES -->
         <div class="tab-pane fade" id="pricing">
             <div class="card">
-                <div class="card-header">Drug Prices (Kenya Shillings)</div>
+                <div class="card-header"><i class="fas fa-tag"></i> Drug Prices (Kenya Shillings)</div>
                 <div class="card-body">
                     <table class="table" id="priceTable">
                         <thead><tr><th>Drug</th><th>Price (KES)</th></tr></thead>
