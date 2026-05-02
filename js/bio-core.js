@@ -115,7 +115,7 @@ async function analyzeSeq() {
     addRecord("Sequence analysis", `GC=${gc}%`, 5);
 }
 
-// ========== UNIPROT SEARCH + ALPHAFOLD ==========
+// ========== UNIPROT SEARCH (by exact name) ==========
 async function searchUniProt() {
     const proteinName = document.getElementById('proteinName').value.trim();
     if (!proteinName) {
@@ -128,7 +128,6 @@ async function searchUniProt() {
     resultDiv.style.display = 'block';
 
     try {
-        // Search UniProt for reviewed entries
         const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(proteinName)}+AND+reviewed:true&format=json&size=1`;
         const response = await fetch(searchUrl);
         const data = await response.json();
@@ -156,12 +155,60 @@ async function searchUniProt() {
             </a>
         `;
 
-        // Now load AlphaFold structure using this accession
         await loadAlphaFoldStructure(accession, proteinDesc);
 
     } catch (error) {
         resultDiv.innerHTML = `<i class="fas fa-exclamation-triangle text-danger"></i> Error: ${error.message}`;
         document.getElementById('uniprotLink').innerHTML = '';
+    }
+}
+
+// ========== NEW: GENERAL PROTEIN SEARCH (e.g., "breast cancer protein") ==========
+async function searchGeneralProtein() {
+    const searchTerm = document.getElementById('generalSearch').value.trim();
+    if (!searchTerm) {
+        alert("Please enter a search term (e.g., breast cancer protein)");
+        return;
+    }
+
+    const resultDiv = document.getElementById('structResult');
+    resultDiv.innerHTML = '<div class="loading"></div> Searching UniProt for "' + searchTerm + '"...';
+    resultDiv.style.display = 'block';
+    document.getElementById('uniprotLink').innerHTML = '';
+
+    try {
+        // Search UniProt for human proteins (organism_id:9606) matching the term
+        const url = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(searchTerm)}+AND+organism_id:9606&format=json&size=1`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!data.results || data.results.length === 0) {
+            throw new Error(`No human protein found for "${searchTerm}"`);
+        }
+
+        const bestMatch = data.results[0];
+        const accession = bestMatch.primaryAccession;
+        const proteinName = bestMatch.proteinDescription?.recommendedName?.fullName?.value || bestMatch.entryName || accession;
+        const organism = bestMatch.organism?.scientificName || "Unknown";
+
+        resultDiv.innerHTML = `
+            <i class="fas fa-check-circle text-success"></i> 
+            <strong>Top Result: ${proteinName}</strong><br>
+            Accession: ${accession}<br>
+            Organism: ${organism}<br>
+            ✅ Ready to load structure.
+        `;
+
+        document.getElementById('uniprotLink').innerHTML = `
+            <a href="https://www.uniprot.org/uniprot/${accession}" target="_blank" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-external-link-alt"></i> View on UniProt
+            </a>
+        `;
+
+        await loadAlphaFoldStructure(accession, proteinName);
+
+    } catch (error) {
+        resultDiv.innerHTML = `<i class="fas fa-exclamation-triangle text-danger"></i> Error: ${error.message}`;
     }
 }
 
@@ -172,7 +219,6 @@ async function loadAlphaFoldStructure(accession, proteinName) {
     resultDiv.innerHTML += '<br><div class="loading"></div> Fetching 3D structure from AlphaFold...';
 
     try {
-        // AlphaFold DB URL pattern (model version 4)
         const pdbUrl = `https://alphafold.ebi.ac.uk/files/AF-${accession}-F1-model_v4.pdb`;
         const pdbResponse = await fetch(pdbUrl);
         if (!pdbResponse.ok) throw new Error('AlphaFold model not available for this protein');
@@ -188,7 +234,6 @@ async function loadAlphaFoldStructure(accession, proteinName) {
 
         resultDiv.innerHTML += `<br><i class="fas fa-cube"></i> 3D structure loaded. ✅ +15 BIO`;
         
-        // Update stats and blockchain
         structCount++;
         document.getElementById('structures').innerText = structCount;
         tokenBalance += 15;
