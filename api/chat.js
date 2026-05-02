@@ -22,12 +22,15 @@ The platform offers:
 - Drug pricing in Kenyan Shillings
 
 Answer only questions related to bioinformatics, protein structure, drug discovery, molecular docking, genomics, and the features of this website. 
-If the user asks something completely unrelated (e.g., weather, politics, sports, general knowledge not related to science), politely redirect them: "I'm specialized in bioinformatics and drug discovery. Could you ask a question related to proteins, genes, docking, or our platform?".
+If the user asks something completely unrelated (e.g., weather, politics, sports), politely redirect them: "I'm specialized in bioinformatics and drug discovery. Could you ask a question related to proteins, genes, docking, or our platform?".
 Keep answers concise and scientific.`;
 
     try {
-        // Use gemini-pro (more stable) instead of gemini-1.5-flash
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+        // CORRECT MODEL NAME for Gemini 1.5 Flash (free tier)
+        const modelName = "gemini-1.5-flash";
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+
+        const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
