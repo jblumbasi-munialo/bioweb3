@@ -33,7 +33,6 @@ class ContentManager {
     }
     showNotification(msg) {
         let div = document.createElement('div');
-        div.className = 'toast-notification';
         div.innerHTML = `<i class="fas fa-info-circle"></i> ${msg}`;
         div.style.cssText = 'position:fixed;top:80px;right:20px;background:white;padding:12px 20px;border-radius:12px;box-shadow:0 5px 15px rgba(0,0,0,0.2);z-index:3000';
         document.body.appendChild(div);
@@ -48,26 +47,41 @@ const cm = new ContentManager();
 let web3, account;
 let analysisCount = 0, structCount = 0, drugCount = 0, tokenBalance = 0;
 let ledger = [];
-let currentStructure = null;
+let currentStructure = null;      // stores PDB data for docking
+let currentAccession = null;
 
-// Wallet connection
+// ========== WALLET & BLOCKCHAIN ==========
 async function connectWallet() {
     if (window.ethereum) {
         let acc = await ethereum.request({method:'eth_requestAccounts'});
         account = acc[0];
         web3 = new Web3(window.ethereum);
         document.getElementById('connectWallet').innerHTML = `<i class="fas fa-check-circle"></i> ${account.slice(0,6)}...`;
-        document.getElementById('walletStatus').innerHTML = `<i class="fas fa-check-circle fa-2x"></i><h4>Connected</h4><p>${account.slice(0,10)}...</p><p>$BIO: <span id="bioBal">0</span></p>`;
+        document.getElementById('walletStatus').innerHTML = `
+            <i class="fas fa-check-circle fa-2x"></i>
+            <h4>Connected</h4>
+            <p>${account.slice(0,10)}...</p>
+            <p>$BIO: <span id="bioBal">0</span></p>
+        `;
     } else alert("Install MetaMask");
 }
 
-// Record on blockchain ledger
 function addRecord(type, data, reward = 10) {
-    let rec = {type, data, time: new Date().toLocaleTimeString(), hash:'0x'+Math.random().toString(36).substr(2,8)};
+    let rec = {
+        type,
+        data,
+        time: new Date().toLocaleTimeString(),
+        hash: '0x' + Math.random().toString(36).substr(2, 8)
+    };
     ledger.unshift(rec);
     let ledgerDiv = document.getElementById('ledger');
     if (ledgerDiv) {
-        ledgerDiv.innerHTML = ledger.slice(0,8).map(r=>`<div class='bg-light p-2 mb-2 rounded'><small>${r.time}</small> <strong>${r.type}</strong><br>${r.data}<br><code>${r.hash}</code></div>`).join('');
+        ledgerDiv.innerHTML = ledger.slice(0,8).map(r => `
+            <div class='bg-light p-2 mb-2 rounded'>
+                <small>${r.time}</small> <strong>${r.type}</strong><br>
+                ${r.data}<br><code>${r.hash}</code>
+            </div>
+        `).join('');
     }
     tokenBalance += reward;
     document.getElementById('tokens').innerText = tokenBalance;
@@ -79,53 +93,146 @@ async function recordCurrent() {
     cm.showNotification("Recorded on blockchain!");
 }
 
-// Sequence analysis
+// ========== SEQUENCE ANALYSIS ==========
 async function analyzeSeq() {
     let seq = document.getElementById('seqInput').value.trim();
     if (!seq) { alert("Paste a sequence"); return; }
     let rev = bio.reverseComplement(seq);
     let gc = bio.gcContent(seq);
-    document.getElementById('seqResult').innerHTML = `<strong>Analysis</strong><br>Length: ${seq.length}<br>GC%: ${gc}%`;
-    document.getElementById('revCompDisplay').innerHTML = `<strong>Reverse complement</strong><br><pre>${rev}</pre>`;
+    document.getElementById('seqResult').innerHTML = `
+        <strong>Analysis</strong><br>
+        Length: ${seq.length}<br>
+        GC%: ${gc}%
+    `;
+    document.getElementById('revCompDisplay').innerHTML = `
+        <strong>Reverse complement</strong><br><pre>${rev}</pre>
+    `;
     document.getElementById('seqResult').style.display = 'block';
-    analysisCount++; document.getElementById('analyses').innerText = analysisCount;
-    tokenBalance += 5; document.getElementById('tokens').innerText = tokenBalance;
+    analysisCount++;
+    document.getElementById('analyses').innerText = analysisCount;
+    tokenBalance += 5;
+    document.getElementById('tokens').innerText = tokenBalance;
     addRecord("Sequence analysis", `GC=${gc}%`, 5);
 }
 
-// AlphaFold prediction (simulated with 3D viewer)
-async function predictStructure() {
-    let id = document.getElementById('uniprot').value;
-    let resultDiv = document.getElementById('structResult');
-    resultDiv.innerHTML = '<div class="loading"></div> Predicting structure...';
+// ========== UNIPROT SEARCH + ALPHAFOLD ==========
+async function searchUniProt() {
+    const proteinName = document.getElementById('proteinName').value.trim();
+    if (!proteinName) {
+        alert("Enter a protein name (e.g., TP53)");
+        return;
+    }
+
+    const resultDiv = document.getElementById('structResult');
+    resultDiv.innerHTML = '<div class="loading"></div> Searching UniProt...';
     resultDiv.style.display = 'block';
-    setTimeout(() => {
-        resultDiv.innerHTML = `<i class="fas fa-check-circle text-success"></i> Predicted ${id} (confidence 88%)<br>✅ +15 BIO`;
-        structCount++; document.getElementById('structures').innerText = structCount;
-        tokenBalance += 15; document.getElementById('tokens').innerText = tokenBalance;
-        addRecord("AlphaFold", `${id} predicted`, 15);
-        let viewer = new $3Dmol.GLViewer(document.getElementById('viewer3d'), {backgroundColor:0xf5f5f5});
-        viewer.addLabel(`${id} (predicted)`, {position:{x:0,y:0,z:0}, fontSize:14});
-        viewer.setStyle({},{sphere:{scale:0.5,color:'#2c7a47'}});
-        viewer.zoomTo(); viewer.render();
-        currentStructure = id;
-    }, 2000);
+
+    try {
+        // Search UniProt for reviewed entries
+        const searchUrl = `https://rest.uniprot.org/uniprotkb/search?query=${encodeURIComponent(proteinName)}+AND+reviewed:true&format=json&size=1`;
+        const response = await fetch(searchUrl);
+        const data = await response.json();
+
+        if (!data.results || data.results.length === 0) {
+            throw new Error(`No reviewed UniProt entry found for "${proteinName}"`);
+        }
+
+        const entry = data.results[0];
+        const accession = entry.primaryAccession;
+        const proteinDesc = entry.proteinDescription?.recommendedName?.fullName?.value || proteinName;
+        const organism = entry.organism?.scientificName || "Unknown";
+
+        resultDiv.innerHTML = `
+            <i class="fas fa-check-circle text-success"></i> 
+            <strong>Found: ${proteinDesc}</strong><br>
+            Accession: ${accession}<br>
+            Organism: ${organism}<br>
+            ✅ Ready to load structure.
+        `;
+
+        document.getElementById('uniprotLink').innerHTML = `
+            <a href="https://www.uniprot.org/uniprot/${accession}" target="_blank" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-external-link-alt"></i> View on UniProt
+            </a>
+        `;
+
+        // Now load AlphaFold structure using this accession
+        await loadAlphaFoldStructure(accession, proteinDesc);
+
+    } catch (error) {
+        resultDiv.innerHTML = `<i class="fas fa-exclamation-triangle text-danger"></i> Error: ${error.message}`;
+        document.getElementById('uniprotLink').innerHTML = '';
+    }
 }
 
-// Docking simulation
+async function loadAlphaFoldStructure(accession, proteinName) {
+    const viewerDiv = document.getElementById('viewer3d');
+    const resultDiv = document.getElementById('structResult');
+
+    resultDiv.innerHTML += '<br><div class="loading"></div> Fetching 3D structure from AlphaFold...';
+
+    try {
+        // AlphaFold DB URL pattern (model version 4)
+        const pdbUrl = `https://alphafold.ebi.ac.uk/files/AF-${accession}-F1-model_v4.pdb`;
+        const pdbResponse = await fetch(pdbUrl);
+        if (!pdbResponse.ok) throw new Error('AlphaFold model not available for this protein');
+        const pdbData = await pdbResponse.text();
+
+        // Render in 3Dmol.js
+        const config = { backgroundColor: 0xf5f5f5 };
+        const viewer = new $3Dmol.GLViewer(viewerDiv, config);
+        viewer.addModel(pdbData, "pdb");
+        viewer.setStyle({}, { cartoon: { color: '#2c7a47' } });
+        viewer.zoomTo();
+        viewer.render();
+
+        resultDiv.innerHTML += `<br><i class="fas fa-cube"></i> 3D structure loaded. ✅ +15 BIO`;
+        
+        // Update stats and blockchain
+        structCount++;
+        document.getElementById('structures').innerText = structCount;
+        tokenBalance += 15;
+        document.getElementById('tokens').innerText = tokenBalance;
+        addRecord("AlphaFold", `${proteinName} (${accession}) structure loaded`, 15);
+        currentStructure = pdbData;
+        currentAccession = accession;
+
+    } catch (err) {
+        resultDiv.innerHTML += `<br><i class="fas fa-exclamation-triangle text-danger"></i> Could not load 3D structure: ${err.message}`;
+    }
+}
+
+// ========== MOLECULAR DOCKING ==========
 async function runDock() {
-    if (!currentStructure) { alert("Predict a structure first"); return; }
-    let resultDiv = document.getElementById('dockResult');
-    resultDiv.innerHTML = '<div class="loading"></div> Running docking...';
+    if (!currentStructure) {
+        alert("Please load a protein structure first (search for a protein in the AlphaFold tab)");
+        return;
+    }
+    const resultDiv = document.getElementById('dockResult');
+    resultDiv.innerHTML = '<div class="loading"></div> Running docking simulation...';
     resultDiv.style.display = 'block';
+
     setTimeout(() => {
-        let drugs = ["Trastuzumab","Pertuzumab","Lapatinib"];
-        let scores = drugs.map(()=>(-7.5-Math.random()*3).toFixed(1));
-        resultDiv.innerHTML = `<strong>Top hit:</strong> ${drugs[0]} (${scores[0]} kcal/mol)<br>✅ +10 BIO`;
-        drugCount += drugs.length; document.getElementById('drugs').innerText = drugCount;
-        tokenBalance += 10; document.getElementById('tokens').innerText = tokenBalance;
-        addRecord("Docking", `On ${currentStructure}`, 10);
-        Plotly.newPlot('dockChart', [{x:drugs, y:scores, type:'bar', marker:{color:'#1a5f7a'}}], {title:'Binding affinities', paper_bgcolor:'white'});
+        const drugs = ["Trastuzumab", "Pertuzumab", "Lapatinib"];
+        const scores = drugs.map(() => (-7.5 - Math.random() * 3).toFixed(1));
+        resultDiv.innerHTML = `
+            <strong>Top hit:</strong> ${drugs[0]} (${scores[0]} kcal/mol)<br>
+            ✅ +10 BIO
+        `;
+        drugCount += drugs.length;
+        document.getElementById('drugs').innerText = drugCount;
+        tokenBalance += 10;
+        document.getElementById('tokens').innerText = tokenBalance;
+        addRecord("Docking", `On ${currentAccession || "loaded structure"}`, 10);
+        Plotly.newPlot('dockChart', [{
+            x: drugs,
+            y: scores,
+            type: 'bar',
+            marker: { color: '#1a5f7a' }
+        }], {
+            title: 'Binding affinities',
+            paper_bgcolor: 'white'
+        });
     }, 2000);
 }
 
@@ -134,7 +241,9 @@ async function refreshPrices() {
     cm.showNotification("Prices updated from config.json");
 }
 
-// Initialize
+// ========== INITIALIZATION ==========
 document.getElementById('connectWallet')?.addEventListener('click', connectWallet);
 cm.loadConfig();
-if (document.getElementById('dockChart')) Plotly.newPlot('dockChart', [{x:[],y:[]}], {title:'Docking results will appear here'});
+if (document.getElementById('dockChart')) {
+    Plotly.newPlot('dockChart', [{x:[], y:[]}], {title:'Docking results will appear here'});
+}
