@@ -11,9 +11,7 @@ class BioUtils {
 }
 
 class ContentManager {
-    constructor() {
-        this.config = null;
-    }
+    constructor() { this.config = null; }
     async loadConfig() {
         let resp = await fetch('./data/config.json');
         this.config = await resp.json();
@@ -42,7 +40,21 @@ class ContentManager {
 const bio = BioUtils;
 const cm = new ContentManager();
 
-// Global state
+// ========== SUPABASE CLIENT ==========
+// Replace these with your actual Supabase URL and anon key from your project
+const SUPABASE_URL = "https://your-project.supabase.co";      // <-- CHANGE THIS
+const SUPABASE_ANON_KEY = "your-anon-key";                   // <-- CHANGE THIS
+let supabase;
+async function initSupabase() {
+    if (!window.supabaseJs) {
+        console.error("Supabase JS not loaded – using fallback (local storage only)");
+        return;
+    }
+    supabase = window.supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+initSupabase();
+
+// ========== GLOBAL STATE ==========
 let web3, account;
 let analysisCount = 0, structCount = 0, drugCount = 0, tokenBalance = 0;
 let ledger = [];
@@ -62,6 +74,10 @@ async function connectWallet() {
             <p>${account.slice(0,10)}...</p>
             <p>$BIO: <span id="bioBal">0</span></p>
         `;
+        // Load user profile from Supabase (if available)
+        loadUserProfile();
+        // Also refresh profile display if profile tab is active
+        displayProfile();
     } else alert("Install MetaMask");
 }
 
@@ -100,6 +116,7 @@ async function analyzeSeq() {
     tokenBalance += 5;
     document.getElementById('tokens').innerText = tokenBalance;
     addRecord("Sequence analysis", `GC=${gc}%`, 5);
+    saveUserProfile(); // optional: auto-save
 }
 
 // ========== UNIPROT SEARCH ==========
@@ -174,6 +191,7 @@ async function loadAlphaFoldStructure(accession, proteinName) {
         addRecord("AlphaFold", `${proteinName} (${accession}) structure loaded`, 15);
         currentStructure = pdbData;
         currentAccession = accession;
+        saveUserProfile();
     } catch (err) {
         resultDiv.innerHTML += `<br><i class="fas fa-exclamation-triangle text-danger"></i> Could not load 3D structure: ${err.message}`;
     }
@@ -194,12 +212,118 @@ async function runDock() {
         document.getElementById('tokens').innerText = tokenBalance;
         addRecord("Docking", `On ${currentAccession || "loaded structure"}`, 10);
         Plotly.newPlot('dockChart', [{x: drugs, y: scores, type: 'bar', marker: { color: '#1a5f7a' }}], { title: 'Binding affinities', paper_bgcolor: 'white' });
+        saveUserProfile();
     }, 2000);
 }
 
 async function refreshPrices() {
     await cm.loadConfig();
     cm.showNotification("Prices updated");
+}
+
+// ========== USER PROFILE (Supabase) ==========
+async function saveUserProfile() {
+    if (!account) { cm.showNotification("Connect wallet first"); return; }
+    if (!supabase) { cm.showNotification("Supabase not initialised – using local storage only"); return; }
+
+    const profile = {
+        wallet_address: account,
+        saved_analyses: JSON.parse(localStorage.getItem(`analyses_${account}`) || '[]'),
+        favorite_proteins: JSON.parse(localStorage.getItem(`favorites_${account}`) || '[]'),
+        docking_results: JSON.parse(localStorage.getItem(`docking_${account}`) || '[]'),
+        bio_balance: tokenBalance,
+        chat_history: conversationHistory.slice(-20),
+        last_active: new Date().toISOString()
+    };
+    // Also store in local storage as backup
+    localStorage.setItem(`profile_${account}`, JSON.stringify(profile));
+    try {
+        const { error } = await supabase
+            .from('user_profiles')
+            .upsert(profile);
+        if (error) throw error;
+        cm.showNotification("Profile saved to cloud!");
+    } catch (err) {
+        console.error(err);
+        cm.showNotification("Cloud save failed – saved locally only");
+    }
+}
+
+async function loadUserProfile() {
+    if (!account || !supabase) return;
+    try {
+        const { data, error } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('wallet_address', account)
+            .single();
+        if (error && error.code !== 'PGRST116') throw error;
+        if (data) {
+            tokenBalance = data.bio_balance || 0;
+            document.getElementById('tokens').innerText = tokenBalance;
+            analysisCount = data.saved_analyses?.length || 0;
+            structCount = data.favorite_proteins?.length || 0; // just a proxy
+            document.getElementById('analyses').innerText = analysisCount;
+            document.getElementById('structures').innerText = structCount;
+            drugCount = data.docking_results?.length || 0;
+            document.getElementById('drugs').innerText = drugCount;
+            cm.showNotification("Profile loaded from cloud");
+        } else {
+            // first time user – create empty profile
+            await saveUserProfile();
+        }
+    } catch (err) {
+        console.error(err);
+        cm.showNotification("Could not load cloud profile – using local");
+    }
+}
+
+async function displayProfile() {
+    if (!account) {
+        document.getElementById('profileInfo').innerHTML = '<p>Connect wallet to see your profile.</p>';
+        return;
+    }
+    let profile = null;
+    if (supabase) {
+        const { data } = await supabase.from('user_profiles').select('*').eq('wallet_address', account).single();
+        profile = data;
+    } else {
+        const local = localStorage.getItem(`profile_${account}`);
+        if (local) profile = JSON.parse(local);
+    }
+    if (profile) {
+        document.getElementById('profileInfo').innerHTML = `
+            <p><strong>Wallet:</strong> ${account.slice(0,6)}...${account.slice(-4)}</p>
+            <p><strong>$BIO Balance:</strong> ${profile.bio_balance || 0}</p>
+            <p><strong>Saved analyses:</strong> ${profile.saved_analyses?.length || 0}</p>
+            <p><strong>Favorite proteins:</strong> ${profile.favorite_proteins?.length || 0}</p>
+        `;
+        document.getElementById('savedItems').innerHTML = `
+            <h6>Recent Analyses</h6>
+            <ul>${(profile.saved_analyses || []).slice(-5).map(a => `<li>${a}</li>`).join('') || '<li>None yet</li>'}</ul>
+        `;
+    } else {
+        document.getElementById('profileInfo').innerHTML = `<p>No saved profile yet. Start using the platform to create one.</p>`;
+        document.getElementById('savedItems').innerHTML = '';
+    }
+}
+
+async function clearUserData() {
+    if (!account) return;
+    localStorage.removeItem(`profile_${account}`);
+    if (supabase) {
+        await supabase.from('user_profiles').delete().eq('wallet_address', account);
+    }
+    tokenBalance = 0;
+    analysisCount = 0;
+    structCount = 0;
+    drugCount = 0;
+    document.getElementById('tokens').innerText = tokenBalance;
+    document.getElementById('analyses').innerText = analysisCount;
+    document.getElementById('structures').innerText = structCount;
+    document.getElementById('drugs').innerText = drugCount;
+    cm.showNotification("All data cleared");
+    displayProfile();
 }
 
 // ========== FLOATING CHATBOT WITH MEMORY ==========
@@ -223,7 +347,6 @@ async function sendChatMessage() {
     if (!question) return;
     input.value = '';
 
-    // Add user message to history and UI
     conversationHistory.push({ role: "user", content: question });
     addChatMessage('You', question, 'user');
 
@@ -239,6 +362,8 @@ async function sendChatMessage() {
         } else {
             conversationHistory.push({ role: "assistant", content: data.reply });
             addChatMessage('Bot', data.reply, 'bot');
+            // optionally save chat to profile
+            saveUserProfile();
         }
     } catch (err) {
         addChatMessage('Bot', 'Network error. Please try again.', 'bot');
@@ -246,16 +371,14 @@ async function sendChatMessage() {
     }
 }
 
-// Clear chat history
 function clearChatHistory() {
-    conversationHistory = [conversationHistory[0]]; // keep system prompt
+    conversationHistory = [conversationHistory[0]];
     const container = document.getElementById('chatbotMessages');
     if (container) {
         container.innerHTML = '<div class="message-bubble system-bubble">Chat cleared. Ask me about bioinformatics, protein structures, drug discovery, or how to use this platform.</div>';
     }
 }
 
-// Toggle floating chatbot window
 let chatbotOpen = false;
 function toggleChatbot() {
     const win = document.getElementById('chatbotWindow');
@@ -270,7 +393,6 @@ function closeChatbot() {
     if (win) win.style.display = 'none';
 }
 
-// Enter key to submit
 function setupChatbotEvents() {
     const input = document.getElementById('chatbotInput');
     if (input) {
@@ -295,4 +417,9 @@ document.addEventListener('DOMContentLoaded', () => {
         Plotly.newPlot('dockChart', [{x:[], y:[]}], {title:'Docking results will appear here'});
     }
     setupChatbotEvents();
+    // Trigger profile display when profile tab is shown
+    const profileTab = document.querySelector('#mainTab button[data-bs-target="#profile"]');
+    if (profileTab) {
+        profileTab.addEventListener('shown.bs.tab', () => displayProfile());
+    }
 });
