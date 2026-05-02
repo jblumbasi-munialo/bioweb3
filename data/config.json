@@ -1,0 +1,9 @@
+{
+  "exchangeRate": 130,
+  "drugs": {
+    "Trastuzumab": { "usdPrice": 45000 },
+    "Pertuzumab": { "usdPrice": 62000 },
+    "Sotorasib": { "usdPrice": 125000 },
+    "Osimertinib": { "usdPrice": 72000 }
+  }
+}
