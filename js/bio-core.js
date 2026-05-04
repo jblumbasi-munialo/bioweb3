@@ -41,7 +41,7 @@ const bio = BioUtils;
 const cm = new ContentManager();
 
 // ========== SUPABASE CLIENT ==========
-// Replace these with your actual Supabase URL and anon key from your project
+// 🔴 REPLACE WITH YOUR ACTUAL SUPABASE URL AND ANON KEY 🔴
 const SUPABASE_URL = "https://your-project.supabase.co";      // <-- CHANGE THIS
 const SUPABASE_ANON_KEY = "your-anon-key";                   // <-- CHANGE THIS
 let supabase;
@@ -74,9 +74,7 @@ async function connectWallet() {
             <p>${account.slice(0,10)}...</p>
             <p>$BIO: <span id="bioBal">0</span></p>
         `;
-        // Load user profile from Supabase (if available)
         loadUserProfile();
-        // Also refresh profile display if profile tab is active
         displayProfile();
     } else alert("Install MetaMask");
 }
@@ -116,7 +114,7 @@ async function analyzeSeq() {
     tokenBalance += 5;
     document.getElementById('tokens').innerText = tokenBalance;
     addRecord("Sequence analysis", `GC=${gc}%`, 5);
-    saveUserProfile(); // optional: auto-save
+    saveUserProfile();
 }
 
 // ========== UNIPROT SEARCH ==========
@@ -235,7 +233,6 @@ async function saveUserProfile() {
         chat_history: conversationHistory.slice(-20),
         last_active: new Date().toISOString()
     };
-    // Also store in local storage as backup
     localStorage.setItem(`profile_${account}`, JSON.stringify(profile));
     try {
         const { error } = await supabase
@@ -262,14 +259,13 @@ async function loadUserProfile() {
             tokenBalance = data.bio_balance || 0;
             document.getElementById('tokens').innerText = tokenBalance;
             analysisCount = data.saved_analyses?.length || 0;
-            structCount = data.favorite_proteins?.length || 0; // just a proxy
+            structCount = data.favorite_proteins?.length || 0;
             document.getElementById('analyses').innerText = analysisCount;
             document.getElementById('structures').innerText = structCount;
             drugCount = data.docking_results?.length || 0;
             document.getElementById('drugs').innerText = drugCount;
             cm.showNotification("Profile loaded from cloud");
         } else {
-            // first time user – create empty profile
             await saveUserProfile();
         }
     } catch (err) {
@@ -326,9 +322,144 @@ async function clearUserData() {
     displayProfile();
 }
 
+// ========== BIOIMAGING (Vizarr) ==========
+function setZarrUrl(url) {
+    document.getElementById('zarrUrl').value = url;
+    loadZarr();
+}
+async function loadZarr() {
+    const url = document.getElementById('zarrUrl').value.trim();
+    if (!url) {
+        alert('Please enter a Zarr URL');
+        return;
+    }
+    const container = document.getElementById('vizarrFrame');
+    container.innerHTML = `<iframe src="https://hms-dbmi.github.io/vizarr/?source=${encodeURIComponent(url)}" width="100%" height="600px" frameborder="0" allowfullscreen></iframe>`;
+}
+
+// ========== GENOME VAULT (VCF storage & query) ==========
+// Helper: compute SHA-256 hash
+async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+}
+
+async function uploadVCF() {
+    const fileInput = document.getElementById('vcfFile');
+    const file = fileInput.files[0];
+    if (!file) return alert("Select a VCF file");
+    if (!account) return alert("Connect wallet first");
+
+    const text = await file.text();
+    const lines = text.split('\n');
+    const variants = [];
+    let variantCount = 0;
+
+    for (let line of lines) {
+        if (line.startsWith('#')) continue;
+        const cols = line.split('\t');
+        if (cols.length < 5) continue;
+        // Basic VCF columns: CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT, ...
+        variants.push({
+            wallet_address: account,
+            chromosome: cols[0],
+            position: parseInt(cols[1]),
+            ref: cols[3],
+            alt: cols[4],
+            rsid: (cols[2] !== '.' && cols[2] !== '') ? cols[2] : null,
+            genotype: cols[9] ? cols[9].split(':')[0] : ''
+        });
+        variantCount++;
+        // Limit to 10,000 to avoid hitting Supabase limits for demo
+        if (variantCount >= 10000) break;
+    }
+
+    if (variants.length === 0) {
+        alert("No valid variants found in VCF");
+        return;
+    }
+
+    // Insert into Supabase
+    if (supabase) {
+        const { error } = await supabase.from('user_variants').insert(variants);
+        if (error) {
+            console.error(error);
+            alert("Database error: " + error.message);
+            return;
+        }
+    } else {
+        // Fallback: store in localStorage
+        localStorage.setItem(`vcf_${account}`, JSON.stringify(variants));
+    }
+
+    // Record hash in blockchain ledger
+    const hash = await sha256(text);
+    addRecord("VCF storage", `Stored ${variants.length} variants, hash: ${hash.slice(0,16)}...`, 20);
+    cm.showNotification(`Stored ${variants.length} variants in Genome Vault! +20 BIO`);
+    fileInput.value = ''; // clear
+}
+
+async function queryVariants() {
+    const query = document.getElementById('chrPos').value.trim();
+    const match = query.match(/chr([0-9XY]+):(\d+)-(\d+)/i);
+    if (!match) {
+        alert("Use format: chr7:55174779-55274879");
+        return;
+    }
+    const [, chr, start, end] = match;
+    if (!account) {
+        alert("Connect wallet first");
+        return;
+    }
+
+    let variants = [];
+    if (supabase) {
+        const { data, error } = await supabase
+            .from('user_variants')
+            .select('*')
+            .eq('wallet_address', account)
+            .eq('chromosome', chr)
+            .gte('position', parseInt(start))
+            .lte('position', parseInt(end));
+        if (error) {
+            console.error(error);
+            alert("Query error: " + error.message);
+            return;
+        }
+        variants = data;
+    } else {
+        const stored = localStorage.getItem(`vcf_${account}`);
+        if (stored) {
+            const all = JSON.parse(stored);
+            variants = all.filter(v => v.chromosome === chr && v.position >= parseInt(start) && v.position <= parseInt(end));
+        }
+    }
+
+    const resultDiv = document.getElementById('variantResult');
+    if (variants.length === 0) {
+        resultDiv.innerHTML = "<p>No variants found in this region.</p>";
+    } else {
+        let html = `<strong>Found ${variants.length} variants:</strong><div class="table-responsive"><table class="table table-sm table-bordered table-variants"><thead><tr><th>Chr</th><th>Pos</th><th>Ref</th><th>Alt</th><th>rsID</th><th>Genotype</th></tr></thead><tbody>`;
+        variants.forEach(v => {
+            html += `<tr><td>${v.chromosome}</td><td>${v.position}</td><td>${v.ref}</td><td>${v.alt}</td><td>${v.rsid || '-'}</td><td>${v.genotype || '-'}</td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+        resultDiv.innerHTML = html;
+    }
+    resultDiv.style.display = 'block';
+
+    // Also load IGV.js for visualisation (only if we have a BAM/CRAM, but we can show a placeholder)
+    const igvDiv = document.getElementById('igvViewer');
+    igvDiv.innerHTML = '<div class="text-muted">IGV.js visualisation requires a BAM/CRAM file. This feature can be extended later.</div>';
+    // Optionally, you could call IGV with a public BAM – but we skip for now.
+}
+
 // ========== FLOATING CHATBOT WITH MEMORY ==========
 let conversationHistory = [
-    { role: "system", content: "You are a helpful scientific assistant for BioWeb3. The platform offers: protein sequence analysis, AlphaFold structure prediction, molecular docking simulation, blockchain recording of research (BIO tokens), and drug pricing in Kenyan Shillings. Answer only questions related to bioinformatics, protein structure, drug discovery, molecular docking, genomics, and platform features. If off-topic, politely redirect to ask about science. Keep answers concise." }
+    { role: "system", content: "You are a helpful scientific assistant for BioWeb3. The platform offers: protein sequence analysis, AlphaFold structure prediction, molecular docking simulation, blockchain recording, drug pricing in KES, a bioimaging viewer, and a Genome Vault to store/query VCF files. Answer only science questions. Redirect off-topic politely." }
 ];
 
 function addChatMessage(sender, text, type = 'user') {
@@ -362,7 +493,6 @@ async function sendChatMessage() {
         } else {
             conversationHistory.push({ role: "assistant", content: data.reply });
             addChatMessage('Bot', data.reply, 'bot');
-            // optionally save chat to profile
             saveUserProfile();
         }
     } catch (err) {
@@ -417,7 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
         Plotly.newPlot('dockChart', [{x:[], y:[]}], {title:'Docking results will appear here'});
     }
     setupChatbotEvents();
-    // Trigger profile display when profile tab is shown
     const profileTab = document.querySelector('#mainTab button[data-bs-target="#profile"]');
     if (profileTab) {
         profileTab.addEventListener('shown.bs.tab', () => displayProfile());
