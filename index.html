@@ -147,7 +147,7 @@
 <div class="container" style="margin-top: 80px;">
     <div class="text-center mb-4">
         <h1 class="display-4 fw-bold">🧬 Decentralized Bioinformatics</h1>
-        <p class="lead">HCMI-CMDC Integration | CRISPR | Drug Discovery | GO Enrichment | Genome Browser</p>
+        <p class="lead">HCMI-CMDC Integration | CRISPR | Drug Discovery | GO Enrichment | Genome Browser | Run DEG Pipeline</p>
     </div>
 
     <div class="row mb-4">
@@ -179,10 +179,11 @@
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#drugdiscovery">💊 Drug Disc.</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#goenrichment">🧬 GO Enrichment</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#genomicviewer">🔬 Genome Viewer</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#runpipe">⚙️ Run DEG Pipeline</button></li>
     </ul>
 
     <div class="tab-content">
-        <!-- ========== EXISTING TABS (keep as before) ========== -->
+        <!-- ========== EXISTING TABS ========== -->
         <!-- Sequence analysis tab -->
         <div class="tab-pane fade show active" id="seq">
             <div class="row">
@@ -313,7 +314,6 @@
             </div>
         </div>
 
-        <!-- ========== NEW TABS ========== -->
         <!-- CRISPR Analysis Tab -->
         <div class="tab-pane fade" id="crispr">
             <div class="card">
@@ -376,6 +376,22 @@
                         <button class="btn btn-secondary mt-2 ms-2" onclick="loadDemoGenomic()">Load Demo (NA12878)</button>
                     </div>
                     <div id="igvContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RUN DIFFERENTIAL EXPRESSION PIPELINE TAB -->
+        <div class="tab-pane fade" id="runpipe">
+            <div class="card">
+                <div class="card-header"><i class="fas fa-cogs"></i> Run DEG Pipeline (Upload Count Matrix)</div>
+                <div class="card-body">
+                    <p>Upload a CSV file with genes as rows and samples as columns. First column = gene names. At least 2 control and 2 treatment samples.</p>
+                    <div class="mb-3">
+                        <input type="file" id="degCountFile" accept=".csv" class="form-control">
+                        <button class="btn btn-primary mt-2" onclick="runDEGPipeline()">Run Analysis</button>
+                    </div>
+                    <div id="pipelineStatus" class="result-box" style="display:none"></div>
+                    <div id="pipelineResults"></div>
                 </div>
             </div>
         </div>
