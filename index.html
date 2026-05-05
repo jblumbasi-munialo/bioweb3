@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BioWeb3 | AI Bioinformatics + Genome Vault</title>
+    <title>BioWeb3 | HCMI-CMDC Molecular Medicine</title>
     <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-3.0.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.1/3Dmol-min.js"></script>
@@ -12,7 +12,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Floating Chatbot Styles (same as before) */
+        /* Floating Chatbot Styles */
         .chatbot-float {
             position: fixed;
             bottom: 20px;
@@ -124,12 +124,11 @@
         @media (max-width: 480px) {
             .chatbot-window { width: 300px; height: 450px; right: 10px; bottom: 70px; }
         }
-        .table-variants {
-            font-size: 12px;
+        .table-variants, .crispr-table, .drug-table, .go-table {
+            font-size: 13px;
         }
-        #igvViewer {
-            height: 400px;
-            margin-top: 15px;
+        #igvContainer {
+            height: 600px;
             border: 1px solid #ddd;
             border-radius: 8px;
             background: white;
@@ -148,7 +147,7 @@
 <div class="container" style="margin-top: 80px;">
     <div class="text-center mb-4">
         <h1 class="display-4 fw-bold">🧬 Decentralized Bioinformatics</h1>
-        <p class="lead">Genome Vault | AlphaFold | Docking | Blockchain</p>
+        <p class="lead">HCMI-CMDC Integration | CRISPR | Drug Discovery | GO Enrichment | Genome Browser</p>
     </div>
 
     <div class="row mb-4">
@@ -176,10 +175,14 @@
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pricing">💰 Pricing (KES)</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile">👤 Profile</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#bioimaging">🔬 Bioimaging</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#genomevault">📀 Genome Vault</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#crispr">✂️ CRISPR</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#drugdiscovery">💊 Drug Disc.</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#goenrichment">🧬 GO Enrichment</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#genomicviewer">🔬 Genome Viewer</button></li>
     </ul>
 
     <div class="tab-content">
+        <!-- ========== EXISTING TABS (keep as before) ========== -->
         <!-- Sequence analysis tab -->
         <div class="tab-pane fade show active" id="seq">
             <div class="row">
@@ -310,22 +313,69 @@
             </div>
         </div>
 
-        <!-- GENOME VAULT TAB (VCF storage, query, IGV) -->
-        <div class="tab-pane fade" id="genomevault">
+        <!-- ========== NEW TABS ========== -->
+        <!-- CRISPR Analysis Tab -->
+        <div class="tab-pane fade" id="crispr">
             <div class="card">
-                <div class="card-header"><i class="fas fa-database"></i> Genome Vault – Store & Query Personal Variants (VCF)</div>
+                <div class="card-header"><i class="fas fa-dna"></i> CRISPR Off‑Target Analysis</div>
                 <div class="card-body">
-                    <h6>📤 Upload your VCF file (max 10 MB)</h6>
-                    <input type="file" id="vcfFile" accept=".vcf,.vcf.gz">
-                    <button class="btn btn-primary mt-2" onclick="uploadVCF()">Upload & Index</button>
-                    <hr>
-                    <h6>🔍 Query variants by genomic region</h6>
-                    <div class="input-group">
-                        <input type="text" id="chrPos" class="form-control" placeholder="e.g., chr7:55174779-55274879">
-                        <button class="btn btn-primary" onclick="queryVariants()">Query</button>
+                    <div class="mb-3">
+                        <button class="btn btn-primary btn-sm" onclick="loadCrisprData()">Load CRISPR Data</button>
+                        <span id="crisprStatus" class="ms-2 text-muted"></span>
                     </div>
-                    <div id="variantResult" class="result-box mt-3" style="display:none"></div>
-                    <div id="igvViewer"></div>
+                    <div id="crisprTable" style="overflow-x: auto;">
+                        <p class="text-muted">Click load to view off‑target predictions from your HCMI-CMDC repository.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drug Discovery Tab -->
+        <div class="tab-pane fade" id="drugdiscovery">
+            <div class="card">
+                <div class="card-header"><i class="fas fa-capsules"></i> Drug Discovery & Clinical Trials</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-primary btn-sm" onclick="loadDrugData()">Load Drug Data</button>
+                        <span id="drugStatus" class="ms-2 text-muted"></span>
+                    </div>
+                    <div id="drugTable" style="overflow-x: auto;">
+                        <p class="text-muted">Click load to view drug candidates and trial opportunities.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GO Enrichment Tab -->
+        <div class="tab-pane fade" id="goenrichment">
+            <div class="card">
+                <div class="card-header"><i class="fas fa-chart-pie"></i> Gene Ontology Enrichment</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-primary btn-sm" onclick="loadGOData()">Load GO Results</button>
+                        <span id="goStatus" class="ms-2 text-muted"></span>
+                    </div>
+                    <div id="goTable" style="overflow-x: auto;">
+                        <p class="text-muted">Click load to view enriched GO terms.</p>
+                    </div>
+                    <div id="goChart" style="height: 400px; margin-top: 20px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Genomic Viewer Tab (IGV.js) -->
+        <div class="tab-pane fade" id="genomicviewer">
+            <div class="card">
+                <div class="card-header"><i class="fas fa-chromosome"></i> Interactive Genome Browser (IGV.js)</div>
+                <div class="card-body">
+                    <p>Load genomic data from your HCMI-CMDC repository (VCF, BAM, etc.).</p>
+                    <div class="mb-3">
+                        <label class="form-label">Enter BAM/CRAM URL (or use demo):</label>
+                        <input type="text" id="bamUrl" class="form-control" placeholder="https://raw.githubusercontent.com/jblumbasi-munialo/HCMI-CMDC-Molecular-Medicine-Research/main/sample.bam">
+                        <button class="btn btn-primary mt-2" onclick="loadGenomicViewer()">Load Genome Browser</button>
+                        <button class="btn btn-secondary mt-2 ms-2" onclick="loadDemoGenomic()">Load Demo (NA12878)</button>
+                    </div>
+                    <div id="igvContainer"></div>
                 </div>
             </div>
         </div>
