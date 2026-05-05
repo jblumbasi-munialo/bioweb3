@@ -41,13 +41,13 @@ const bio = BioUtils;
 const cm = new ContentManager();
 
 // ========== SUPABASE CLIENT ==========
-// 🔴 REPLACE WITH YOUR ACTUAL SUPABASE URL AND ANON KEY 🔴
-const SUPABASE_URL = "https://your-project.supabase.co";      // <-- CHANGE THIS
-const SUPABASE_ANON_KEY = "your-anon-key";                   // <-- CHANGE THIS
+// *** REPLACE WITH YOUR ACTUAL SUPABASE CREDENTIALS ***
+const SUPABASE_URL = "https://your-project.supabase.co";
+const SUPABASE_ANON_KEY = "your-anon-key";
 let supabase;
 async function initSupabase() {
     if (!window.supabaseJs) {
-        console.error("Supabase JS not loaded – using fallback (local storage only)");
+        console.error("Supabase JS not loaded");
         return;
     }
     supabase = window.supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -337,129 +337,206 @@ async function loadZarr() {
     container.innerHTML = `<iframe src="https://hms-dbmi.github.io/vizarr/?source=${encodeURIComponent(url)}" width="100%" height="600px" frameborder="0" allowfullscreen></iframe>`;
 }
 
-// ========== GENOME VAULT (VCF storage & query) ==========
-// Helper: compute SHA-256 hash
-async function sha256(message) {
-    const msgBuffer = new TextEncoder().encode(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
+// ========== NEW: CRISPR DATA ==========
+async function loadCrisprData() {
+    const statusSpan = document.getElementById('crisprStatus');
+    const container = document.getElementById('crisprTable');
+    statusSpan.innerHTML = 'Loading...';
+    try {
+        // *** REPLACE WITH YOUR ACTUAL RAW CSV URL ***
+        const url = 'https://raw.githubusercontent.com/jblumbasi-munialo/HCMI-CMDC-Molecular-Medicine-Research/main/crispr_off_target_analysis.csv';
+        const response = await fetch(url);
+        const csvText = await response.text();
+        const rows = csvText.trim().split('\n').map(row => row.split(','));
+        if (rows.length < 2) throw new Error('No data');
+        const headers = rows[0];
+        const dataRows = rows.slice(1);
+        let html = '<div class="table-responsive"><table class="table table-bordered table-striped"><thead><tr>';
+        headers.forEach(h => html += `<th>${h}</th>`);
+        html += '<tr></thead><tbody>';
+        dataRows.forEach(row => {
+            html += '<tr>';
+            row.forEach(cell => html += `<td>${cell}</td>`);
+            html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+        statusSpan.innerHTML = `✅ Loaded ${dataRows.length} records.`;
+        addRecord("CRISPR Analysis", `Loaded ${dataRows.length} off‑target predictions`, 5);
+    } catch (err) {
+        container.innerHTML = `<p class="text-danger">Error loading CRISPR data: ${err.message}</p>`;
+        statusSpan.innerHTML = '❌ Failed';
+    }
 }
 
-async function uploadVCF() {
-    const fileInput = document.getElementById('vcfFile');
-    const file = fileInput.files[0];
-    if (!file) return alert("Select a VCF file");
-    if (!account) return alert("Connect wallet first");
-
-    const text = await file.text();
-    const lines = text.split('\n');
-    const variants = [];
-    let variantCount = 0;
-
-    for (let line of lines) {
-        if (line.startsWith('#')) continue;
-        const cols = line.split('\t');
-        if (cols.length < 5) continue;
-        // Basic VCF columns: CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT, ...
-        variants.push({
-            wallet_address: account,
-            chromosome: cols[0],
-            position: parseInt(cols[1]),
-            ref: cols[3],
-            alt: cols[4],
-            rsid: (cols[2] !== '.' && cols[2] !== '') ? cols[2] : null,
-            genotype: cols[9] ? cols[9].split(':')[0] : ''
+// ========== NEW: DRUG DISCOVERY DATA ==========
+async function loadDrugData() {
+    const statusSpan = document.getElementById('drugStatus');
+    const container = document.getElementById('drugTable');
+    statusSpan.innerHTML = 'Loading...';
+    try {
+        // *** REPLACE WITH YOUR ACTUAL RAW CSV URL ***
+        const url = 'https://raw.githubusercontent.com/jblumbasi-munialo/HCMI-CMDC-Molecular-Medicine-Research/main/clinical_trial_opportunities.csv';
+        const response = await fetch(url);
+        const csvText = await response.text();
+        const rows = csvText.trim().split('\n').map(row => row.split(','));
+        if (rows.length < 2) throw new Error('No data');
+        const headers = rows[0];
+        const dataRows = rows.slice(1);
+        let html = '<div class="table-responsive"><table class="table table-bordered table-striped"><thead><tr>';
+        headers.forEach(h => html += `<th>${h}</th>`);
+        html += '</tr></thead><tbody>';
+        dataRows.forEach(row => {
+            html += '<tr>';
+            row.forEach(cell => html += `<td>${cell}</td>`);
+            html += '</tr>';
         });
-        variantCount++;
-        // Limit to 10,000 to avoid hitting Supabase limits for demo
-        if (variantCount >= 10000) break;
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+        statusSpan.innerHTML = `✅ Loaded ${dataRows.length} records.`;
+        addRecord("Drug Discovery", `Loaded ${dataRows.length} clinical opportunities`, 5);
+    } catch (err) {
+        container.innerHTML = `<p class="text-danger">Error loading drug data: ${err.message}</p>`;
+        statusSpan.innerHTML = '❌ Failed';
     }
-
-    if (variants.length === 0) {
-        alert("No valid variants found in VCF");
-        return;
-    }
-
-    // Insert into Supabase
-    if (supabase) {
-        const { error } = await supabase.from('user_variants').insert(variants);
-        if (error) {
-            console.error(error);
-            alert("Database error: " + error.message);
-            return;
-        }
-    } else {
-        // Fallback: store in localStorage
-        localStorage.setItem(`vcf_${account}`, JSON.stringify(variants));
-    }
-
-    // Record hash in blockchain ledger
-    const hash = await sha256(text);
-    addRecord("VCF storage", `Stored ${variants.length} variants, hash: ${hash.slice(0,16)}...`, 20);
-    cm.showNotification(`Stored ${variants.length} variants in Genome Vault! +20 BIO`);
-    fileInput.value = ''; // clear
 }
 
-async function queryVariants() {
-    const query = document.getElementById('chrPos').value.trim();
-    const match = query.match(/chr([0-9XY]+):(\d+)-(\d+)/i);
-    if (!match) {
-        alert("Use format: chr7:55174779-55274879");
+// ========== NEW: GO ENRICHMENT DATA ==========
+async function loadGOData() {
+    const statusSpan = document.getElementById('goStatus');
+    const container = document.getElementById('goTable');
+    const chartDiv = document.getElementById('goChart');
+    statusSpan.innerHTML = 'Loading...';
+    try {
+        // *** TRY JSON FIRST, THEN CSV – ADJUST URLs ***
+        let jsonUrl = 'https://raw.githubusercontent.com/jblumbasi-munialo/HCMI-CMDC-Molecular-Medicine-Research/main/go_enrichment.json';
+        let response = await fetch(jsonUrl);
+        let data = [];
+        if (!response.ok) {
+            const csvUrl = 'https://raw.githubusercontent.com/jblumbasi-munialo/HCMI-CMDC-Molecular-Medicine-Research/main/go_enrichment.csv';
+            response = await fetch(csvUrl);
+            const csvText = await response.text();
+            const rows = csvText.trim().split('\n').map(row => row.split(','));
+            if (rows.length < 2) throw new Error('No GO data');
+            const headers = rows[0];
+            data = rows.slice(1).map(row => {
+                let obj = {};
+                headers.forEach((h, i) => obj[h] = row[i]);
+                return obj;
+            });
+        } else {
+            data = await response.json();
+        }
+
+        // Build table
+        let html = '<div class="table-responsive"><table class="table table-bordered table-striped"><thead><tr>';
+        if (data.length) {
+            Object.keys(data[0]).forEach(k => html += `<th>${k}</th>`);
+            html += '</tr></thead><tbody>';
+            data.forEach(row => {
+                html += '<tr>';
+                Object.values(row).forEach(v => html += `<td>${v}</td>`);
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+        } else {
+            html = '<p>No data found</p>';
+        }
+        container.innerHTML = html;
+        statusSpan.innerHTML = `✅ Loaded ${data.length} GO terms.`;
+
+        // Create bar chart if enrichment_score exists
+        if (data.length > 0 && data[0].hasOwnProperty('enrichment_score')) {
+            const top10 = data.sort((a,b) => parseFloat(b.enrichment_score) - parseFloat(a.enrichment_score)).slice(0,10);
+            const terms = top10.map(d => d.term || d.description || 'Term');
+            const scores = top10.map(d => parseFloat(d.enrichment_score));
+            Plotly.newPlot(chartDiv, [{
+                x: scores,
+                y: terms,
+                type: 'bar',
+                orientation: 'h',
+                marker: { color: '#2c7a47' }
+            }], {
+                title: 'Top 10 Enriched GO Terms',
+                xaxis: { title: 'Enrichment Score' },
+                yaxis: { title: '' },
+                paper_bgcolor: 'white',
+                font: { color: '#1a1a1a' }
+            });
+        } else {
+            chartDiv.innerHTML = '<p class="text-muted">Enrichment score not available for chart.</p>';
+        }
+        addRecord("GO Enrichment", `Loaded ${data.length} GO terms`, 5);
+    } catch (err) {
+        container.innerHTML = `<p class="text-danger">Error loading GO data: ${err.message}</p>`;
+        statusSpan.innerHTML = '❌ Failed';
+    }
+}
+
+// ========== NEW: GENOMIC VIEWER (IGV.js) ==========
+let igvBrowser = null;
+async function loadGenomicViewer() {
+    const bamUrl = document.getElementById('bamUrl').value.trim();
+    if (!bamUrl) {
+        alert('Please enter a BAM/CRAM URL or use the demo button.');
         return;
     }
-    const [, chr, start, end] = match;
-    if (!account) {
-        alert("Connect wallet first");
-        return;
-    }
-
-    let variants = [];
-    if (supabase) {
-        const { data, error } = await supabase
-            .from('user_variants')
-            .select('*')
-            .eq('wallet_address', account)
-            .eq('chromosome', chr)
-            .gte('position', parseInt(start))
-            .lte('position', parseInt(end));
-        if (error) {
-            console.error(error);
-            alert("Query error: " + error.message);
-            return;
+    const container = document.getElementById('igvContainer');
+    container.innerHTML = '<div class="text-center p-5"><div class="loading"></div> Loading genome browser...</div>';
+    try {
+        if (igvBrowser) {
+            igvBrowser.dispose();
         }
-        variants = data;
-    } else {
-        const stored = localStorage.getItem(`vcf_${account}`);
-        if (stored) {
-            const all = JSON.parse(stored);
-            variants = all.filter(v => v.chromosome === chr && v.position >= parseInt(start) && v.position <= parseInt(end));
+        const options = {
+            genome: "hg38",
+            locus: "chr8:127,000,000-128,000,000",
+            tracks: [
+                {
+                    name: "User BAM",
+                    url: bamUrl,
+                    indexURL: bamUrl + ".bai",
+                    format: "bam",
+                    type: "alignment"
+                }
+            ]
+        };
+        igvBrowser = await igv.createBrowser(container, options);
+        addRecord("Genomic Viewer", `Loaded BAM: ${bamUrl}`, 5);
+    } catch (err) {
+        container.innerHTML = `<p class="text-danger">Error loading IGV: ${err.message}</p>`;
+    }
+}
+
+async function loadDemoGenomic() {
+    const container = document.getElementById('igvContainer');
+    container.innerHTML = '<div class="text-center p-5"><div class="loading"></div> Loading demo genome browser...</div>';
+    try {
+        if (igvBrowser) {
+            igvBrowser.dispose();
         }
+        const options = {
+            genome: "hg38",
+            locus: "chr8:127,000,000-128,000,000",
+            tracks: [
+                {
+                    name: "Demo BAM (NA12878)",
+                    url: "https://igv.org/web/release/data/NA12878.bam",
+                    indexURL: "https://igv.org/web/release/data/NA12878.bam.bai",
+                    format: "bam",
+                    type: "alignment"
+                }
+            ]
+        };
+        igvBrowser = await igv.createBrowser(container, options);
+        addRecord("Genomic Viewer", "Loaded demo BAM", 5);
+    } catch (err) {
+        container.innerHTML = `<p class="text-danger">Error loading demo: ${err.message}</p>`;
     }
-
-    const resultDiv = document.getElementById('variantResult');
-    if (variants.length === 0) {
-        resultDiv.innerHTML = "<p>No variants found in this region.</p>";
-    } else {
-        let html = `<strong>Found ${variants.length} variants:</strong><div class="table-responsive"><table class="table table-sm table-bordered table-variants"><thead><tr><th>Chr</th><th>Pos</th><th>Ref</th><th>Alt</th><th>rsID</th><th>Genotype</th></tr></thead><tbody>`;
-        variants.forEach(v => {
-            html += `<tr><td>${v.chromosome}</td><td>${v.position}</td><td>${v.ref}</td><td>${v.alt}</td><td>${v.rsid || '-'}</td><td>${v.genotype || '-'}</td></tr>`;
-        });
-        html += `</tbody></table></div>`;
-        resultDiv.innerHTML = html;
-    }
-    resultDiv.style.display = 'block';
-
-    // Also load IGV.js for visualisation (only if we have a BAM/CRAM, but we can show a placeholder)
-    const igvDiv = document.getElementById('igvViewer');
-    igvDiv.innerHTML = '<div class="text-muted">IGV.js visualisation requires a BAM/CRAM file. This feature can be extended later.</div>';
-    // Optionally, you could call IGV with a public BAM – but we skip for now.
 }
 
 // ========== FLOATING CHATBOT WITH MEMORY ==========
 let conversationHistory = [
-    { role: "system", content: "You are a helpful scientific assistant for BioWeb3. The platform offers: protein sequence analysis, AlphaFold structure prediction, molecular docking simulation, blockchain recording, drug pricing in KES, a bioimaging viewer, and a Genome Vault to store/query VCF files. Answer only science questions. Redirect off-topic politely." }
+    { role: "system", content: "You are a helpful scientific assistant for BioWeb3. The platform offers: protein sequence analysis, AlphaFold, docking, blockchain, KES pricing, profile, bioimaging, CRISPR analysis, drug discovery, GO enrichment, and genome viewer. Answer only science questions. Redirect off-topic politely." }
 ];
 
 function addChatMessage(sender, text, type = 'user') {
