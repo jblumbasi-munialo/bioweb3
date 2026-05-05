@@ -353,7 +353,7 @@ async function loadCrisprData() {
         const dataRows = rows.slice(1);
         let html = '<div class="table-responsive"><table class="table table-bordered table-striped"><thead><tr>';
         headers.forEach(h => html += `<th>${h}</th>`);
-        html += '<tr></thead><tbody>';
+        html += '</tr></thead><tbody>';
         dataRows.forEach(row => {
             html += '<tr>';
             row.forEach(cell => html += `<td>${cell}</td>`);
@@ -473,7 +473,7 @@ async function loadGOData() {
     }
 }
 
-// ========== NEW: GENOMIC VIEWER (IGV.js) ==========
+// ========== GENOMIC VIEWER (IGV.js) ==========
 let igvBrowser = null;
 async function loadGenomicViewer() {
     const bamUrl = document.getElementById('bamUrl').value.trim();
@@ -534,9 +534,90 @@ async function loadDemoGenomic() {
     }
 }
 
+// ========== DIFFERENTIAL EXPRESSION PIPELINE ==========
+async function runDEGPipeline() {
+    const fileInput = document.getElementById('degCountFile');
+    const file = fileInput.files[0];
+    if (!file) {
+        alert("Please select a CSV count matrix file.");
+        return;
+    }
+    const statusDiv = document.getElementById('pipelineStatus');
+    const resultsDiv = document.getElementById('pipelineResults');
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = '<div class="loading"></div> Submitting job...';
+    resultsDiv.innerHTML = '';
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch('/api/run-deg', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+
+        statusDiv.style.display = 'none';
+        resultsDiv.innerHTML = `
+            <div class="alert alert-success mt-2">
+                <strong>✅ Analysis complete!</strong><br>
+                Found ${data.deg_count} differentially expressed genes (FDR < 0.05).
+            </div>
+            <div id="pipelineVolcano" style="height: 500px;"></div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <h5>Top up‑regulated genes</h5>
+                    <table class="table table-sm table-bordered">
+                        <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
+                        <tbody>
+                            ${data.top_up.map(g => `<tr><td><strong>${g.gene}</strong></td><td>${g.log2fc.toFixed(3)}</td><td>${g.padj.toExponential(2)}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h5>Top down‑regulated genes</h5>
+                    <table class="table table-sm table-bordered">
+                        <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
+                        <tbody>
+                            ${data.top_down.map(g => `<tr><td><strong>${g.gene}</strong></td><td>${g.log2fc.toFixed(3)}</td><td>${g.padj.toExponential(2)}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        // Create volcano plot
+        Plotly.newPlot('pipelineVolcano', [{
+            x: data.volcano.log2fc,
+            y: data.volcano.neg_log10_padj,
+            mode: 'markers',
+            marker: {
+                color: data.volcano.is_significant.map(s => s ? '#ef4444' : '#9ca3af'),
+                size: 6
+            },
+            text: data.volcano.gene_names
+        }], {
+            title: 'Volcano Plot',
+            xaxis: { title: 'Log2 Fold Change' },
+            yaxis: { title: '-Log10 adjusted P-value' },
+            plot_bgcolor: 'white',
+            paper_bgcolor: 'white'
+        });
+
+        addRecord("DEG Pipeline", `Computed ${data.deg_count} DEGs`, 20);
+        cm.showNotification(`Pipeline finished! ${data.deg_count} DEGs found.`);
+
+    } catch (err) {
+        statusDiv.innerHTML = `<div class="text-danger">Error: ${err.message}</div>`;
+        console.error(err);
+    }
+}
+
 // ========== FLOATING CHATBOT WITH MEMORY ==========
 let conversationHistory = [
-    { role: "system", content: "You are a helpful scientific assistant for BioWeb3. The platform offers: protein sequence analysis, AlphaFold, docking, blockchain, KES pricing, profile, bioimaging, CRISPR analysis, drug discovery, GO enrichment, and genome viewer. Answer only science questions. Redirect off-topic politely." }
+    { role: "system", content: "You are a helpful scientific assistant for BioWeb3. The platform offers: protein sequence analysis, AlphaFold, docking, blockchain, KES pricing, profile, bioimaging, CRISPR analysis, drug discovery, GO enrichment, genome viewer, and a differential expression pipeline (upload CSV). Answer only science questions. Redirect off-topic politely." }
 ];
 
 function addChatMessage(sender, text, type = 'user') {
@@ -628,4 +709,5 @@ document.addEventListener('DOMContentLoaded', () => {
     if (profileTab) {
         profileTab.addEventListener('shown.bs.tab', () => displayProfile());
     }
+    // Optional: preload data for any tab? Not needed.
 });
