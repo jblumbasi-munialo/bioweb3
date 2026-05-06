@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/run-deg.py": {
+      "runtime": "@vercel/python@4.0.0"
+    }
+  }
+}
