@@ -60,6 +60,7 @@ let analysisCount = 0, structCount = 0, drugCount = 0, tokenBalance = 0;
 let ledger = [];
 let currentStructure = null;
 let currentAccession = null;
+let lastSurvivalStats = null; // For recording
 
 // ========== WALLET & BLOCKCHAIN ==========
 async function connectWallet() {
@@ -352,7 +353,7 @@ async function loadCrisprData() {
         const dataRows = rows.slice(1);
         let html = '<div class="table-responsive"><table class="table table-bordered table-striped"><thead><tr>';
         headers.forEach(h => html += `<th>${h}</th>`);
-        html += '</tr></thead><tbody>';
+        html += '<tr></thead><tbody>';
         dataRows.forEach(row => {
             html += '<tr>';
             row.forEach(cell => html += `<td>${cell}</td>`);
@@ -386,7 +387,7 @@ async function loadDrugData() {
         html += '</tr></thead><tbody>';
         dataRows.forEach(row => {
             html += '<tr>';
-            row.forEach(cell => html += `<td>${cell}</td>`);
+            row.forEach(cell => html += `<table>${cell}</td>`);
             html += '</tr>';
         });
         html += '</tbody></table></div>';
@@ -567,7 +568,11 @@ async function runDEGPipeline() {
                     <table class="table table-sm table-bordered">
                         <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
                         <tbody>
-                            ${data.top_up.map(g => `<tr><td><strong>${g.gene}</strong></td><td>${g.log2fc.toFixed(3)}</td><td>${g.padj.toExponential(2)}</td></tr>`).join('')}
+                            ${data.top_up.map(g => `<tr>
+                                <td><strong>${g.gene}</strong></td>
+                                <td>${g.log2fc.toFixed(3)}</td>
+                                <td>${g.padj.toExponential(2)}</td>
+                            </tr>`).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -576,7 +581,11 @@ async function runDEGPipeline() {
                     <table class="table table-sm table-bordered">
                         <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
                         <tbody>
-                            ${data.top_down.map(g => `<tr><td><strong>${g.gene}</strong></td><td>${g.log2fc.toFixed(3)}</td><td>${g.padj.toExponential(2)}</td></tr>`).join('')}
+                            ${data.top_down.map(g => `<tr>
+                                <td><strong>${g.gene}</strong></td>
+                                <td>${g.log2fc.toFixed(3)}</td>
+                                <td>${g.padj.toExponential(2)}</td>
+                            </tr>`).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -638,7 +647,7 @@ async function loadRegulatoryNetwork() {
             row.forEach(cell => tableHtml += `<td>${cell}</td>`);
             tableHtml += `<td><input type="radio" name="drugTarget" value="${idx}" onclick="selectDrugTarget(${idx}, '${row[0]}')"></td></tr>`;
         });
-        tableHtml += '</tbody></table></div>';
+        tableHtml += '</tbody></td></div>';
         drugTableDiv.innerHTML = tableHtml;
 
         // Optional: load network stats if available
@@ -684,9 +693,136 @@ async function recordCurrentDrugTarget() {
     currentDrugTarget = null;
 }
 
+// ========== SURVIVAL ANALYSIS ==========
+let currentSurvivalStats = null;
+
+async function loadSurvivalData() {
+    const statusSpan = document.getElementById('survivalStatus');
+    const plotDiv = document.getElementById('kmPlot');
+    const summaryDiv = document.getElementById('survivalSummary');
+    statusSpan.innerHTML = 'Loading survival data...';
+    plotDiv.innerHTML = '<div class="loading"></div>';
+
+    try {
+        // First attempt to load from a local CSV file. If not found, generate demo survival data.
+        let url = './data/survival_analysis_results.csv'; // adjust to your actual file
+        let response = await fetch(url);
+        let csvText = '';
+        let useDemo = false;
+        if (!response.ok) {
+            // Fallback to demo data (simulate a small survival dataset)
+            useDemo = true;
+        } else {
+            csvText = await response.text();
+        }
+
+        let times = [], events = [], groups = [];
+        if (useDemo) {
+            // Generate demo Kaplan-Meier data: two groups (Treatment vs Control)
+            for (let i = 0; i < 100; i++) {
+                let isTreatment = Math.random() < 0.5;
+                let time = isTreatment ? Math.random() * 50 + 10 : Math.random() * 40 + 5;
+                let event = Math.random() < 0.7 ? 1 : 0;
+                times.push(time);
+                events.push(event);
+                groups.push(isTreatment ? "Treatment" : "Control");
+            }
+            statusSpan.innerHTML = 'Demo survival data (no file found) – loaded demo.';
+        } else {
+            // Parse real CSV: expect columns "time", "event", "group"
+            const rows = csvText.trim().split('\n').map(r => r.split(','));
+            const headers = rows[0].map(h => h.toLowerCase());
+            const timeIdx = headers.findIndex(h => h.includes('time'));
+            const eventIdx = headers.findIndex(h => h.includes('event'));
+            const groupIdx = headers.findIndex(h => h.includes('group'));
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (row.length < Math.max(timeIdx, eventIdx, groupIdx) + 1) continue;
+                times.push(parseFloat(row[timeIdx]));
+                events.push(parseFloat(row[eventIdx]));
+                groups.push(row[groupIdx]);
+            }
+            statusSpan.innerHTML = `✅ Loaded survival data: ${times.length} patients.`;
+        }
+
+        // Simple Kaplan-Meier by group
+        const uniqueGroups = [...new Set(groups)];
+        const traces = [];
+        for (let g of uniqueGroups) {
+            const idxs = groups.map((val, i) => val === g ? i : -1).filter(i => i !== -1);
+            const grpTimes = idxs.map(i => times[i]);
+            const grpEvents = idxs.map(i => events[i]);
+            const sorted = grpTimes.map((t, i) => ({t, e: grpEvents[i]})).sort((a,b) => a.t - b.t);
+            let survival = 1.0;
+            let atRisk = sorted.length;
+            let x = [0];
+            let y = [1.0];
+            for (let i = 0; i < sorted.length; i++) {
+                const {t, e} = sorted[i];
+                if (e === 1) {
+                    survival = survival * (1 - 1 / atRisk);
+                    x.push(t);
+                    y.push(survival);
+                }
+                atRisk--;
+            }
+            traces.push({
+                x: x,
+                y: y,
+                mode: 'lines',
+                name: g,
+                line: { width: 3 },
+                type: 'scatter'
+            });
+        }
+
+        const layout = {
+            title: 'Kaplan‑Meier Survival Curves',
+            xaxis: { title: 'Time (days / months)' },
+            yaxis: { title: 'Survival Probability', range: [0, 1] },
+            plot_bgcolor: 'white',
+            paper_bgcolor: 'white',
+            font: { color: '#1a1a1a' },
+            hovermode: 'closest',
+            legend: { x: 0.8, y: 0.9 }
+        };
+        Plotly.newPlot('kmPlot', traces, layout);
+
+        // Summary stats
+        const totalPatients = times.length;
+        const eventsCount = events.filter(e => e === 1).length;
+        summaryDiv.innerHTML = `
+            <div class="alert alert-info">
+                <strong>Summary</strong><br>
+                Total patients: ${totalPatients}<br>
+                Events (deaths / progression): ${eventsCount}<br>
+                Groups: ${uniqueGroups.join(', ')}
+            </div>
+        `;
+
+        // Store stats for blockchain recording
+        currentSurvivalStats = { totalPatients, eventsCount, groups: uniqueGroups };
+
+        addRecord("Survival Analysis", `Loaded survival data (n=${totalPatients})`, 5);
+    } catch (err) {
+        plotDiv.innerHTML = `<p class="text-danger">Error loading survival data: ${err.message}</p>`;
+        statusSpan.innerHTML = '❌ Failed to load';
+        console.error(err);
+    }
+}
+
+async function recordSurvivalAnalysis() {
+    if (!currentSurvivalStats) {
+        alert('Load survival data first.');
+        return;
+    }
+    addRecord("Survival Analysis", `Total=${currentSurvivalStats.totalPatients}, events=${currentSurvivalStats.eventsCount}, groups=${currentSurvivalStats.groups.join(',')}`, 10);
+    cm.showNotification(`Survival analysis recorded to blockchain! +10 BIO`);
+}
+
 // ========== FLOATING CHATBOT WITH MEMORY ==========
 let conversationHistory = [
-    { role: "system", content: "You are a helpful scientific assistant for BioWeb3. The platform offers: protein sequence analysis, AlphaFold, docking, blockchain, KES pricing, profile, bioimaging, CRISPR analysis, drug discovery, GO enrichment, genome viewer, differential expression pipeline, and regulatory network/drug target analysis. Answer only science questions. Redirect off-topic politely." }
+    { role: "system", content: "You are a helpful scientific assistant for BioWeb3. The platform offers: protein sequence analysis, AlphaFold, docking, blockchain, KES pricing, profile, bioimaging, CRISPR analysis, drug discovery, GO enrichment, genome viewer, differential expression pipeline, regulatory network/drug target analysis, and survival analysis (Kaplan-Meier). Answer only science questions. Redirect off-topic politely." }
 ];
 
 function addChatMessage(sender, text, type = 'user') {
