@@ -40,8 +40,12 @@ class ContentManager {
 const bio = BioUtils;
 const cm = new ContentManager();
 
-// ========== SUPABASE CLIENT (disabled – replace if needed) ==========
-let supabase = null; // Disable Supabase to avoid errors
+// ========== SUPABASE CLIENT (disabled – prevent redeclaration) ==========
+// The Supabase library may have already created a global 'supabase'.
+// We'll just assign null to it if it doesn't exist.
+if (typeof supabase === 'undefined') {
+    var supabase = null;
+}
 async function initSupabase() { console.log("Supabase not configured"); }
 initSupabase();
 
@@ -210,10 +214,9 @@ async function refreshPrices() {
     cm.showNotification("Prices updated");
 }
 
-// ========== USER PROFILE (Supabase – disabled fallback) ==========
+// ========== USER PROFILE (local storage fallback) ==========
 async function saveUserProfile() {
     if (!account) { cm.showNotification("Connect wallet first"); return; }
-    // Local storage fallback only
     let profile = { wallet_address: account, bio_balance: tokenBalance, saved_analyses: [] };
     localStorage.setItem(`profile_${account}`, JSON.stringify(profile));
     cm.showNotification("Profile saved locally");
@@ -277,9 +280,9 @@ async function loadCrisprData() {
         if (rows.length < 2) throw new Error('No data');
         const headers = rows[0];
         const dataRows = rows.slice(1);
-        let html = '<div class="table-responsive"><table class="table table-bordered table-striped"><thead><tr>';
+        let html = '<div class="table-responsive"><table class="table table-bordered table-striped"><thead><table>';
         headers.forEach(h => html += `<th>${h}</th>`);
-        html += '<tr></thead><tbody>';
+        html += '</tr></thead><tbody>';
         dataRows.forEach(row => {
             html += '<tr>';
             row.forEach(cell => html += `<td>${cell}</td>`);
@@ -310,10 +313,10 @@ async function loadDrugData() {
         const dataRows = rows.slice(1);
         let html = '<div class="table-responsive"><table class="table table-bordered table-striped"><thead><tr>';
         headers.forEach(h => html += `<th>${h}</th>`);
-        html += '</tr></thead><tbody>';
+        html += '<tr></thead><tbody>';
         dataRows.forEach(row => {
             html += '<tr>';
-            row.forEach(cell => html += `<td>${cell}</td>`);
+            row.forEach(cell => html += `<tr>${cell}</td>`);
             html += '</tr>';
         });
         html += '</tbody></table></div>';
@@ -357,7 +360,7 @@ async function loadGOData() {
             html += '<tr></thead><tbody>';
             data.forEach(row => {
                 html += '<tr>';
-                Object.values(row).forEach(v => html += `<tr>${v}</td>`);
+                Object.values(row).forEach(v => html += `<td>${v}</td>`);
                 html += '</tr>';
             });
             html += '</tbody></table></div>';
@@ -465,7 +468,6 @@ async function runDEGPipeline() {
         alert("Data received: " + JSON.stringify(data).slice(0, 100));
         if (data.error) throw new Error(data.error);
         
-        // Display results (simplified)
         resultsDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
         statusDiv.style.display = 'none';
     } catch (err) {
