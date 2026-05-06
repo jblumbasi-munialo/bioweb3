@@ -1,0 +1,5 @@
+{
+  "nodes": 1250,
+  "edges": 8700,
+  "top_regulators": ["TP53", "MYC", "EGFR", "ERBB2", "KRAS"]
+}
