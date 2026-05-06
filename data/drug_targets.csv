@@ -1,0 +1,6 @@
+Drug,TargetGene,Mechanism,Confidence
+Trastuzumab,ERBB2,Antibody inhibitor,High
+Lapatinib,EGFR/ERBB2,Tyrosine kinase inhibitor,High
+Osimertinib,EGFR,TKI,High
+Palbociclib,CDK4/6,CDK inhibitor,High
+Olaparib,PARP1,PARP inhibitor,High
