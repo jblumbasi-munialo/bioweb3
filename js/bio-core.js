@@ -337,13 +337,12 @@ async function loadZarr() {
     container.innerHTML = `<iframe src="https://hms-dbmi.github.io/vizarr/?source=${encodeURIComponent(url)}" width="100%" height="600px" frameborder="0" allowfullscreen></iframe>`;
 }
 
-// ========== NEW: CRISPR DATA ==========
+// ========== CRISPR DATA ==========
 async function loadCrisprData() {
     const statusSpan = document.getElementById('crisprStatus');
     const container = document.getElementById('crisprTable');
     statusSpan.innerHTML = 'Loading...';
     try {
-        // *** REPLACE WITH YOUR ACTUAL RAW CSV URL ***
         const url = 'https://raw.githubusercontent.com/jblumbasi-munialo/HCMI-CMDC-Molecular-Medicine-Research/main/crispr_off_target_analysis.csv';
         const response = await fetch(url);
         const csvText = await response.text();
@@ -369,13 +368,12 @@ async function loadCrisprData() {
     }
 }
 
-// ========== NEW: DRUG DISCOVERY DATA ==========
+// ========== DRUG DISCOVERY DATA ==========
 async function loadDrugData() {
     const statusSpan = document.getElementById('drugStatus');
     const container = document.getElementById('drugTable');
     statusSpan.innerHTML = 'Loading...';
     try {
-        // *** REPLACE WITH YOUR ACTUAL RAW CSV URL ***
         const url = 'https://raw.githubusercontent.com/jblumbasi-munialo/HCMI-CMDC-Molecular-Medicine-Research/main/clinical_trial_opportunities.csv';
         const response = await fetch(url);
         const csvText = await response.text();
@@ -401,14 +399,13 @@ async function loadDrugData() {
     }
 }
 
-// ========== NEW: GO ENRICHMENT DATA ==========
+// ========== GO ENRICHMENT DATA ==========
 async function loadGOData() {
     const statusSpan = document.getElementById('goStatus');
     const container = document.getElementById('goTable');
     const chartDiv = document.getElementById('goChart');
     statusSpan.innerHTML = 'Loading...';
     try {
-        // *** TRY JSON FIRST, THEN CSV – ADJUST URLs ***
         let jsonUrl = 'https://raw.githubusercontent.com/jblumbasi-munialo/HCMI-CMDC-Molecular-Medicine-Research/main/go_enrichment.json';
         let response = await fetch(jsonUrl);
         let data = [];
@@ -428,7 +425,6 @@ async function loadGOData() {
             data = await response.json();
         }
 
-        // Build table
         let html = '<div class="table-responsive"><table class="table table-bordered table-striped"><thead><tr>';
         if (data.length) {
             Object.keys(data[0]).forEach(k => html += `<th>${k}</th>`);
@@ -445,7 +441,6 @@ async function loadGOData() {
         container.innerHTML = html;
         statusSpan.innerHTML = `✅ Loaded ${data.length} GO terms.`;
 
-        // Create bar chart if enrichment_score exists
         if (data.length > 0 && data[0].hasOwnProperty('enrichment_score')) {
             const top10 = data.sort((a,b) => parseFloat(b.enrichment_score) - parseFloat(a.enrichment_score)).slice(0,10);
             const terms = top10.map(d => d.term || d.description || 'Term');
@@ -588,7 +583,6 @@ async function runDEGPipeline() {
             </div>
         `;
 
-        // Create volcano plot
         Plotly.newPlot('pipelineVolcano', [{
             x: data.volcano.log2fc,
             y: data.volcano.neg_log10_padj,
@@ -615,9 +609,84 @@ async function runDEGPipeline() {
     }
 }
 
+// ========== REGULATORY NETWORK & DRUG TARGETS ==========
+let currentDrugTarget = null;
+
+async function loadRegulatoryNetwork() {
+    const statusSpan = document.getElementById('regnetStatus');
+    const drugTableDiv = document.getElementById('drugTargetTable');
+    const summaryDiv = document.getElementById('regnetSummary');
+
+    statusSpan.innerHTML = 'Loading regulatory network data...';
+    drugTableDiv.innerHTML = '<div class="loading"></div>';
+
+    try {
+        // Adjust URL to your actual drug_targets.csv location
+        const drugUrl = 'https://raw.githubusercontent.com/jblumbasi-munialo/ARCHS4-Regulatory-Network/main/drug_targets.csv';
+        const drugResp = await fetch(drugUrl);
+        const drugCsv = await drugResp.text();
+        const rows = drugCsv.trim().split('\n').map(r => r.split(','));
+        if (rows.length < 2) throw new Error('No drug-target data');
+        const headers = rows[0];
+        const dataRows = rows.slice(1);
+
+        let tableHtml = '<div class="table-responsive"><table class="table table-bordered table-striped"><thead><tr>';
+        headers.forEach(h => tableHtml += `<th>${h}</th>`);
+        tableHtml += '<th>Select</th></tr></thead><tbody>';
+        dataRows.forEach((row, idx) => {
+            tableHtml += '<tr>';
+            row.forEach(cell => tableHtml += `<td>${cell}</td>`);
+            tableHtml += `<td><input type="radio" name="drugTarget" value="${idx}" onclick="selectDrugTarget(${idx}, '${row[0]}')"></td></tr>`;
+        });
+        tableHtml += '</tbody></table></div>';
+        drugTableDiv.innerHTML = tableHtml;
+
+        // Optional: load network stats if available
+        let summaryHtml = '';
+        try {
+            const statsUrl = 'https://raw.githubusercontent.com/jblumbasi-munialo/ARCHS4-Regulatory-Network/main/network_stats.json';
+            const statsResp = await fetch(statsUrl);
+            const stats = await statsResp.json();
+            summaryHtml = `
+                <div class="alert alert-info">
+                    <strong>Network Statistics</strong><br>
+                    Nodes: ${stats.nodes || 'N/A'}<br>
+                    Edges: ${stats.edges || 'N/A'}<br>
+                    Top regulators: ${stats.top_regulators ? stats.top_regulators.join(', ') : 'N/A'}
+                </div>
+            `;
+        } catch (e) {
+            summaryHtml = '<div class="alert alert-secondary">Summary statistics not available (network_stats.json missing).</div>';
+        }
+        summaryDiv.innerHTML = summaryHtml;
+
+        statusSpan.innerHTML = `✅ Loaded ${dataRows.length} drug-target interactions. Click a radio button and record to blockchain.`;
+        addRecord("Regulatory Network", `Loaded ${dataRows.length} drug-target pairs`, 5);
+    } catch (err) {
+        drugTableDiv.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+        statusSpan.innerHTML = '❌ Failed to load';
+    }
+}
+
+function selectDrugTarget(idx, drugGene) {
+    currentDrugTarget = { idx, drugGene };
+    document.getElementById('recordDrugTargetBtn').disabled = false;
+}
+
+async function recordCurrentDrugTarget() {
+    if (!currentDrugTarget) {
+        alert('Select a drug-target interaction first.');
+        return;
+    }
+    addRecord("Drug Target Selection", `Selected target: ${currentDrugTarget.drugGene}`, 10);
+    cm.showNotification(`Recorded target ${currentDrugTarget.drugGene} to blockchain! +10 BIO`);
+    document.getElementById('recordDrugTargetBtn').disabled = true;
+    currentDrugTarget = null;
+}
+
 // ========== FLOATING CHATBOT WITH MEMORY ==========
 let conversationHistory = [
-    { role: "system", content: "You are a helpful scientific assistant for BioWeb3. The platform offers: protein sequence analysis, AlphaFold, docking, blockchain, KES pricing, profile, bioimaging, CRISPR analysis, drug discovery, GO enrichment, genome viewer, and a differential expression pipeline (upload CSV). Answer only science questions. Redirect off-topic politely." }
+    { role: "system", content: "You are a helpful scientific assistant for BioWeb3. The platform offers: protein sequence analysis, AlphaFold, docking, blockchain, KES pricing, profile, bioimaging, CRISPR analysis, drug discovery, GO enrichment, genome viewer, differential expression pipeline, and regulatory network/drug target analysis. Answer only science questions. Redirect off-topic politely." }
 ];
 
 function addChatMessage(sender, text, type = 'user') {
@@ -709,5 +778,4 @@ document.addEventListener('DOMContentLoaded', () => {
     if (profileTab) {
         profileTab.addEventListener('shown.bs.tab', () => displayProfile());
     }
-    // Optional: preload data for any tab? Not needed.
 });
