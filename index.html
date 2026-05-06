@@ -124,7 +124,7 @@
         @media (max-width: 480px) {
             .chatbot-window { width: 300px; height: 450px; right: 10px; bottom: 70px; }
         }
-        .table-variants, .crispr-table, .drug-table, .go-table {
+        .table-variants, .crispr-table, .drug-table, .go-table, .regnet-table {
             font-size: 13px;
         }
         #igvContainer {
@@ -147,7 +147,7 @@
 <div class="container" style="margin-top: 80px;">
     <div class="text-center mb-4">
         <h1 class="display-4 fw-bold">🧬 Decentralized Bioinformatics</h1>
-        <p class="lead">HCMI-CMDC Integration | CRISPR | Drug Discovery | GO Enrichment | Genome Browser | Run DEG Pipeline</p>
+        <p class="lead">HCMI-CMDC Integration | CRISPR | Drug Discovery | GO Enrichment | Genome Browser | Run DEG Pipeline | Regulatory Network</p>
     </div>
 
     <div class="row mb-4">
@@ -180,6 +180,7 @@
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#goenrichment">🧬 GO Enrichment</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#genomicviewer">🔬 Genome Viewer</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#runpipe">⚙️ Run DEG Pipeline</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#regnet">🔗 Regulatory Network</button></li>
     </ul>
 
     <div class="tab-content">
@@ -380,7 +381,7 @@
             </div>
         </div>
 
-        <!-- RUN DIFFERENTIAL EXPRESSION PIPELINE TAB -->
+        <!-- Run Differential Expression Pipeline Tab -->
         <div class="tab-pane fade" id="runpipe">
             <div class="card">
                 <div class="card-header"><i class="fas fa-cogs"></i> Run DEG Pipeline (Upload Count Matrix)</div>
@@ -392,6 +393,27 @@
                     </div>
                     <div id="pipelineStatus" class="result-box" style="display:none"></div>
                     <div id="pipelineResults"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== NEW: REGULATORY NETWORK & DRUG TARGETS TAB ========== -->
+        <div class="tab-pane fade" id="regnet">
+            <div class="card">
+                <div class="card-header"><i class="fas fa-project-diagram"></i> Regulatory Network & Drug Targets</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-primary btn-sm" onclick="loadRegulatoryNetwork()">Load Network Data</button>
+                        <span id="regnetStatus" class="ms-2 text-muted"></span>
+                    </div>
+                    <div id="regnetSummary" class="mb-3"></div>
+                    <h5>Drug‑Gene Interactions</h5>
+                    <div id="drugTargetTable" style="overflow-x: auto;">
+                        <p class="text-muted">Click load to view drug targets derived from your regulatory network.</p>
+                    </div>
+                    <div class="mt-3">
+                        <button id="recordDrugTargetBtn" class="btn btn-outline-success" disabled onclick="recordCurrentDrugTarget()">Record selected target to blockchain</button>
+                    </div>
                 </div>
             </div>
         </div>
