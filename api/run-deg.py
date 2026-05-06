@@ -1,10 +1,7 @@
-import os
-import tempfile
-import pandas as pd
-import numpy as np
-from scipy import stats
-from statsmodels.stats.multitest import multipletests
 import json
+import csv
+import io
+import math
 from flask import Request, Response
 
 def handler(request: Request):
@@ -15,56 +12,95 @@ def handler(request: Request):
     if not file:
         return Response(json.dumps({'error': 'No file uploaded'}), status=400, mimetype='application/json')
 
-    # Read CSV
-    try:
-        df = pd.read_csv(file.stream, index_col=0)
-    except Exception as e:
-        return Response(json.dumps({'error': f'Could not read CSV: {str(e)}'}), status=400, mimetype='application/json')
+    # Read CSV content
+    content = file.stream.read().decode('utf-8')
+    reader = csv.reader(io.StringIO(content))
+    rows = list(reader)
+    if len(rows) < 2:
+        return Response(json.dumps({'error': 'Empty or invalid CSV'}), status=400, mimetype='application/json')
 
-    cols = df.columns.tolist()
-    if len(cols) < 4:
-        return Response(json.dumps({'error': 'Need at least 4 samples (2 control, 2 treatment)'}), status=400, mimetype='application/json')
+    headers = rows[0]
+    gene_names = [row[0] for row in rows[1:]]
+    data = [row[1:] for row in rows[1:]]
 
-    # Assume first half control, second half treatment
-    n_control = len(cols) // 2
-    control_cols = cols[:n_control]
-    treatment_cols = cols[n_control:n_control*2] if n_control*2 <= len(cols) else cols[-(len(cols)-n_control):]
-
-    if len(control_cols) < 2 or len(treatment_cols) < 2:
+    n_samples = len(data[0])
+    n_control = n_samples // 2
+    if n_control < 2 or (n_samples - n_control) < 2:
         return Response(json.dumps({'error': 'Need at least 2 control and 2 treatment samples'}), status=400, mimetype='application/json')
+
+    # Convert to numeric
+    matrix = []
+    for row in data:
+        try:
+            nums = [float(x) for x in row]
+            matrix.append(nums)
+        except:
+            matrix.append([0.0] * n_samples)
 
     log2fc = []
     pvals = []
-    gene_names = df.index.tolist()
+    for row in matrix:
+        control = row[:n_control]
+        treatment = row[n_control:n_control*2] if n_control*2 <= n_samples else row[-n_control:]
+        if len(control) < 2 or len(treatment) < 2:
+            log2fc.append(0.0)
+            pvals.append(1.0)
+            continue
 
-    for gene in df.index:
-        c = df.loc[gene, control_cols].values.astype(float)
-        t = df.loc[gene, treatment_cols].values.astype(float)
-        c_mean = np.mean(c) + 1e-8
-        t_mean = np.mean(t) + 1e-8
-        fc = t_mean / c_mean
-        log2fc.append(np.log2(fc))
-        _, p = stats.ttest_ind(t, c)
-        pvals.append(p)
+        mean_c = sum(control) / len(control)
+        mean_t = sum(treatment) / len(treatment)
+        var_c = sum((x - mean_c)**2 for x in control) / (len(control)-1) if len(control)>1 else 0
+        var_t = sum((x - mean_t)**2 for x in treatment) / (len(treatment)-1) if len(treatment)>1 else 0
+        se = math.sqrt(var_c/len(control) + var_t/len(treatment))
+        if se == 0:
+            t_stat = 0
+        else:
+            t_stat = (mean_t - mean_c) / se
 
-    reject, padj, _, _ = multipletests(pvals, method='fdr_bh')
-    is_sig = padj < 0.05
-    deg_count = np.sum(is_sig)
+        # approximate p-value using normal distribution (faster, no external libs)
+        from math import erf, sqrt
+        def norm_cdf(x):
+            return (1.0 + erf(x / sqrt(2.0))) / 2.0
+        p = 2 * (1 - norm_cdf(abs(t_stat)))
+        pvals.append(min(p, 1.0))
+
+        fc = (mean_t + 1e-8) / (mean_c + 1e-8)
+        log2fc.append(math.log2(fc))
+
+    # FDR (Benjamini-Hochberg)
+    def fdr(pvals):
+        n = len(pvals)
+        indexed = list(enumerate(pvals))
+        indexed.sort(key=lambda x: x[1])
+        fdr_values = [0.0] * n
+        cumulative_min = 1.0
+        for i in range(n-1, -1, -1):
+            orig_idx, p = indexed[i]
+            fdr_values[orig_idx] = min(cumulative_min, p * n / (i+1))
+            cumulative_min = min(cumulative_min, fdr_values[orig_idx])
+        return fdr_values
+
+    padj = fdr(pvals)
+    is_sig = [p < 0.05 for p in padj]
+    deg_count = sum(is_sig)
 
     volcano = {
         'log2fc': log2fc,
-        'neg_log10_padj': (-np.log10(padj + 1e-300)).tolist(),
-        'is_significant': is_sig.tolist(),
+        'neg_log10_padj': [-math.log10(p+1e-300) for p in padj],
+        'is_significant': is_sig,
         'gene_names': gene_names
     }
 
-    res_df = pd.DataFrame({'gene': gene_names, 'log2fc': log2fc, 'padj': padj, 'significant': is_sig})
-    sig_df = res_df[res_df['significant']]
-    top_up = sig_df.nlargest(10, 'log2fc')[['gene','log2fc','padj']].to_dict(orient='records')
-    top_down = sig_df.nsmallest(10, 'log2fc')[['gene','log2fc','padj']].to_dict(orient='records')
+    # Top up/down
+    res = [(gene_names[i], log2fc[i], padj[i]) for i in range(len(gene_names))]
+    up = sorted([r for r in res if r[1] > 0], key=lambda x: x[1], reverse=True)[:10]
+    down = sorted([r for r in res if r[1] < 0], key=lambda x: x[1])[:10]
+
+    top_up = [{'gene': g, 'log2fc': l, 'padj': p} for g,l,p in up]
+    top_down = [{'gene': g, 'log2fc': l, 'padj': p} for g,l,p in down]
 
     return Response(json.dumps({
-        'deg_count': int(deg_count),
+        'deg_count': deg_count,
         'volcano': volcano,
         'top_up': top_up,
         'top_down': top_down
