@@ -40,18 +40,9 @@ class ContentManager {
 const bio = BioUtils;
 const cm = new ContentManager();
 
-// ========== SUPABASE CLIENT ==========
-// *** REPLACE WITH YOUR ACTUAL SUPABASE CREDENTIALS ***
-const SUPABASE_URL = "https://your-project.supabase.co";
-const SUPABASE_ANON_KEY = "your-anon-key";
-let supabase;
-async function initSupabase() {
-    if (!window.supabaseJs) {
-        console.error("Supabase JS not loaded");
-        return;
-    }
-    supabase = window.supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
+// ========== SUPABASE CLIENT (disabled – replace if needed) ==========
+let supabase = null; // Disable Supabase to avoid errors
+async function initSupabase() { console.log("Supabase not configured"); }
 initSupabase();
 
 // ========== GLOBAL STATE ==========
@@ -60,7 +51,6 @@ let analysisCount = 0, structCount = 0, drugCount = 0, tokenBalance = 0;
 let ledger = [];
 let currentStructure = null;
 let currentAccession = null;
-let lastSurvivalStats = null; // For recording
 
 // ========== WALLET & BLOCKCHAIN ==========
 async function connectWallet() {
@@ -220,58 +210,23 @@ async function refreshPrices() {
     cm.showNotification("Prices updated");
 }
 
-// ========== USER PROFILE (Supabase) ==========
+// ========== USER PROFILE (Supabase – disabled fallback) ==========
 async function saveUserProfile() {
     if (!account) { cm.showNotification("Connect wallet first"); return; }
-    if (!supabase) { cm.showNotification("Supabase not initialised – using local storage only"); return; }
-
-    const profile = {
-        wallet_address: account,
-        saved_analyses: JSON.parse(localStorage.getItem(`analyses_${account}`) || '[]'),
-        favorite_proteins: JSON.parse(localStorage.getItem(`favorites_${account}`) || '[]'),
-        docking_results: JSON.parse(localStorage.getItem(`docking_${account}`) || '[]'),
-        bio_balance: tokenBalance,
-        chat_history: conversationHistory.slice(-20),
-        last_active: new Date().toISOString()
-    };
+    // Local storage fallback only
+    let profile = { wallet_address: account, bio_balance: tokenBalance, saved_analyses: [] };
     localStorage.setItem(`profile_${account}`, JSON.stringify(profile));
-    try {
-        const { error } = await supabase
-            .from('user_profiles')
-            .upsert(profile);
-        if (error) throw error;
-        cm.showNotification("Profile saved to cloud!");
-    } catch (err) {
-        console.error(err);
-        cm.showNotification("Cloud save failed – saved locally only");
-    }
+    cm.showNotification("Profile saved locally");
 }
 
 async function loadUserProfile() {
-    if (!account || !supabase) return;
-    try {
-        const { data, error } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('wallet_address', account)
-            .single();
-        if (error && error.code !== 'PGRST116') throw error;
-        if (data) {
-            tokenBalance = data.bio_balance || 0;
-            document.getElementById('tokens').innerText = tokenBalance;
-            analysisCount = data.saved_analyses?.length || 0;
-            structCount = data.favorite_proteins?.length || 0;
-            document.getElementById('analyses').innerText = analysisCount;
-            document.getElementById('structures').innerText = structCount;
-            drugCount = data.docking_results?.length || 0;
-            document.getElementById('drugs').innerText = drugCount;
-            cm.showNotification("Profile loaded from cloud");
-        } else {
-            await saveUserProfile();
-        }
-    } catch (err) {
-        console.error(err);
-        cm.showNotification("Could not load cloud profile – using local");
+    if (!account) return;
+    let local = localStorage.getItem(`profile_${account}`);
+    if (local) {
+        let profile = JSON.parse(local);
+        tokenBalance = profile.bio_balance || 0;
+        document.getElementById('tokens').innerText = tokenBalance;
+        cm.showNotification("Profile loaded from local storage");
     }
 }
 
@@ -280,45 +235,19 @@ async function displayProfile() {
         document.getElementById('profileInfo').innerHTML = '<p>Connect wallet to see your profile.</p>';
         return;
     }
-    let profile = null;
-    if (supabase) {
-        const { data } = await supabase.from('user_profiles').select('*').eq('wallet_address', account).single();
-        profile = data;
-    } else {
-        const local = localStorage.getItem(`profile_${account}`);
-        if (local) profile = JSON.parse(local);
-    }
-    if (profile) {
-        document.getElementById('profileInfo').innerHTML = `
-            <p><strong>Wallet:</strong> ${account.slice(0,6)}...${account.slice(-4)}</p>
-            <p><strong>$BIO Balance:</strong> ${profile.bio_balance || 0}</p>
-            <p><strong>Saved analyses:</strong> ${profile.saved_analyses?.length || 0}</p>
-            <p><strong>Favorite proteins:</strong> ${profile.favorite_proteins?.length || 0}</p>
-        `;
-        document.getElementById('savedItems').innerHTML = `
-            <h6>Recent Analyses</h6>
-            <ul>${(profile.saved_analyses || []).slice(-5).map(a => `<li>${a}</li>`).join('') || '<li>None yet</li>'}</ul>
-        `;
-    } else {
-        document.getElementById('profileInfo').innerHTML = `<p>No saved profile yet. Start using the platform to create one.</p>`;
-        document.getElementById('savedItems').innerHTML = '';
-    }
+    let profile = JSON.parse(localStorage.getItem(`profile_${account}`) || '{}');
+    document.getElementById('profileInfo').innerHTML = `
+        <p><strong>Wallet:</strong> ${account.slice(0,6)}...${account.slice(-4)}</p>
+        <p><strong>$BIO Balance:</strong> ${profile.bio_balance || 0}</p>
+        <p><strong>Saved analyses:</strong> ${profile.saved_analyses?.length || 0}</p>
+    `;
 }
 
 async function clearUserData() {
     if (!account) return;
     localStorage.removeItem(`profile_${account}`);
-    if (supabase) {
-        await supabase.from('user_profiles').delete().eq('wallet_address', account);
-    }
     tokenBalance = 0;
-    analysisCount = 0;
-    structCount = 0;
-    drugCount = 0;
     document.getElementById('tokens').innerText = tokenBalance;
-    document.getElementById('analyses').innerText = analysisCount;
-    document.getElementById('structures').innerText = structCount;
-    document.getElementById('drugs').innerText = drugCount;
     cm.showNotification("All data cleared");
     displayProfile();
 }
@@ -330,10 +259,7 @@ function setZarrUrl(url) {
 }
 async function loadZarr() {
     const url = document.getElementById('zarrUrl').value.trim();
-    if (!url) {
-        alert('Please enter a Zarr URL');
-        return;
-    }
+    if (!url) { alert('Please enter a Zarr URL'); return; }
     const container = document.getElementById('vizarrFrame');
     container.innerHTML = `<iframe src="https://hms-dbmi.github.io/vizarr/?source=${encodeURIComponent(url)}" width="100%" height="600px" frameborder="0" allowfullscreen></iframe>`;
 }
@@ -387,7 +313,7 @@ async function loadDrugData() {
         html += '</tr></thead><tbody>';
         dataRows.forEach(row => {
             html += '<tr>';
-            row.forEach(cell => html += `<table>${cell}</td>`);
+            row.forEach(cell => html += `<td>${cell}</td>`);
             html += '</tr>';
         });
         html += '</tbody></table></div>';
@@ -425,14 +351,13 @@ async function loadGOData() {
         } else {
             data = await response.json();
         }
-
         let html = '<div class="table-responsive"><table class="table table-bordered table-striped"><thead><tr>';
         if (data.length) {
             Object.keys(data[0]).forEach(k => html += `<th>${k}</th>`);
-            html += '</tr></thead><tbody>';
+            html += '<tr></thead><tbody>';
             data.forEach(row => {
                 html += '<tr>';
-                Object.values(row).forEach(v => html += `<td>${v}</td>`);
+                Object.values(row).forEach(v => html += `<tr>${v}</td>`);
                 html += '</tr>';
             });
             html += '</tbody></table></div>';
@@ -441,7 +366,6 @@ async function loadGOData() {
         }
         container.innerHTML = html;
         statusSpan.innerHTML = `✅ Loaded ${data.length} GO terms.`;
-
         if (data.length > 0 && data[0].hasOwnProperty('enrichment_score')) {
             const top10 = data.sort((a,b) => parseFloat(b.enrichment_score) - parseFloat(a.enrichment_score)).slice(0,10);
             const terms = top10.map(d => d.term || d.description || 'Term');
@@ -473,28 +397,15 @@ async function loadGOData() {
 let igvBrowser = null;
 async function loadGenomicViewer() {
     const bamUrl = document.getElementById('bamUrl').value.trim();
-    if (!bamUrl) {
-        alert('Please enter a BAM/CRAM URL or use the demo button.');
-        return;
-    }
+    if (!bamUrl) { alert('Please enter a BAM/CRAM URL or use the demo button.'); return; }
     const container = document.getElementById('igvContainer');
     container.innerHTML = '<div class="text-center p-5"><div class="loading"></div> Loading genome browser...</div>';
     try {
-        if (igvBrowser) {
-            igvBrowser.dispose();
-        }
+        if (igvBrowser) igvBrowser.dispose();
         const options = {
             genome: "hg38",
             locus: "chr8:127,000,000-128,000,000",
-            tracks: [
-                {
-                    name: "User BAM",
-                    url: bamUrl,
-                    indexURL: bamUrl + ".bai",
-                    format: "bam",
-                    type: "alignment"
-                }
-            ]
+            tracks: [{ name: "User BAM", url: bamUrl, indexURL: bamUrl + ".bai", format: "bam", type: "alignment" }]
         };
         igvBrowser = await igv.createBrowser(container, options);
         addRecord("Genomic Viewer", `Loaded BAM: ${bamUrl}`, 5);
@@ -502,26 +413,15 @@ async function loadGenomicViewer() {
         container.innerHTML = `<p class="text-danger">Error loading IGV: ${err.message}</p>`;
     }
 }
-
 async function loadDemoGenomic() {
     const container = document.getElementById('igvContainer');
     container.innerHTML = '<div class="text-center p-5"><div class="loading"></div> Loading demo genome browser...</div>';
     try {
-        if (igvBrowser) {
-            igvBrowser.dispose();
-        }
+        if (igvBrowser) igvBrowser.dispose();
         const options = {
             genome: "hg38",
             locus: "chr8:127,000,000-128,000,000",
-            tracks: [
-                {
-                    name: "Demo BAM (NA12878)",
-                    url: "https://igv.org/web/release/data/NA12878.bam",
-                    indexURL: "https://igv.org/web/release/data/NA12878.bam.bai",
-                    format: "bam",
-                    type: "alignment"
-                }
-            ]
+            tracks: [{ name: "Demo BAM (NA12878)", url: "https://igv.org/web/release/data/NA12878.bam", indexURL: "https://igv.org/web/release/data/NA12878.bam.bai", format: "bam", type: "alignment" }]
         };
         igvBrowser = await igv.createBrowser(container, options);
         addRecord("Genomic Viewer", "Loaded demo BAM", 5);
@@ -530,107 +430,59 @@ async function loadDemoGenomic() {
     }
 }
 
-// ========== DIFFERENTIAL EXPRESSION PIPELINE ==========
+// ========== DIFFERENTIAL EXPRESSION PIPELINE (with alerts) ==========
 async function runDEGPipeline() {
+    alert("Step 1: Function started");
     const fileInput = document.getElementById('degCountFile');
-    const file = fileInput.files[0];
-    if (!file) {
-        alert("Please select a CSV count matrix file.");
+    if (!fileInput) {
+        alert("No file input element with id 'degCountFile'");
         return;
     }
+    const file = fileInput.files[0];
+    if (!file) {
+        alert("Please select a CSV file.");
+        return;
+    }
+    alert("File selected: " + file.name);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
     const statusDiv = document.getElementById('pipelineStatus');
     const resultsDiv = document.getElementById('pipelineResults');
     statusDiv.style.display = 'block';
     statusDiv.innerHTML = '<div class="loading"></div> Submitting job...';
     resultsDiv.innerHTML = '';
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
+        alert("Sending request to /api/run-deg");
         const response = await fetch('/api/run-deg', {
             method: 'POST',
             body: formData
         });
+        alert("Response status: " + response.status);
         const data = await response.json();
+        alert("Data received: " + JSON.stringify(data).slice(0, 100));
         if (data.error) throw new Error(data.error);
-
+        
+        // Display results (simplified)
+        resultsDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
         statusDiv.style.display = 'none';
-        resultsDiv.innerHTML = `
-            <div class="alert alert-success mt-2">
-                <strong>✅ Analysis complete!</strong><br>
-                Found ${data.deg_count} differentially expressed genes (FDR < 0.05).
-            </div>
-            <div id="pipelineVolcano" style="height: 500px;"></div>
-            <div class="row mt-3">
-                <div class="col-md-6">
-                    <h5>Top up‑regulated genes</h5>
-                    <table class="table table-sm table-bordered">
-                        <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
-                        <tbody>
-                            ${data.top_up.map(g => `<tr>
-                                <td><strong>${g.gene}</strong></td>
-                                <td>${g.log2fc.toFixed(3)}</td>
-                                <td>${g.padj.toExponential(2)}</td>
-                            </tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                <div class="col-md-6">
-                    <h5>Top down‑regulated genes</h5>
-                    <table class="table table-sm table-bordered">
-                        <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
-                        <tbody>
-                            ${data.top_down.map(g => `<tr>
-                                <td><strong>${g.gene}</strong></td>
-                                <td>${g.log2fc.toFixed(3)}</td>
-                                <td>${g.padj.toExponential(2)}</td>
-                            </tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-
-        Plotly.newPlot('pipelineVolcano', [{
-            x: data.volcano.log2fc,
-            y: data.volcano.neg_log10_padj,
-            mode: 'markers',
-            marker: {
-                color: data.volcano.is_significant.map(s => s ? '#ef4444' : '#9ca3af'),
-                size: 6
-            },
-            text: data.volcano.gene_names
-        }], {
-            title: 'Volcano Plot',
-            xaxis: { title: 'Log2 Fold Change' },
-            yaxis: { title: '-Log10 adjusted P-value' },
-            plot_bgcolor: 'white',
-            paper_bgcolor: 'white'
-        });
-
-        addRecord("DEG Pipeline", `Computed ${data.deg_count} DEGs`, 20);
-        cm.showNotification(`Pipeline finished! ${data.deg_count} DEGs found.`);
-
     } catch (err) {
-        statusDiv.innerHTML = `<div class="text-danger">Error: ${err.message}</div>`;
-        console.error(err);
+        alert("Error: " + err.message);
+        statusDiv.innerHTML = '<div class="text-danger">Error: ' + err.message + '</div>';
     }
 }
 
 // ========== REGULATORY NETWORK & DRUG TARGETS ==========
 let currentDrugTarget = null;
-
 async function loadRegulatoryNetwork() {
     const statusSpan = document.getElementById('regnetStatus');
     const drugTableDiv = document.getElementById('drugTargetTable');
     const summaryDiv = document.getElementById('regnetSummary');
-
     statusSpan.innerHTML = 'Loading regulatory network data...';
     drugTableDiv.innerHTML = '<div class="loading"></div>';
-
     try {
-        // Adjust URL to your actual drug_targets.csv location
         const drugUrl = 'https://raw.githubusercontent.com/jblumbasi-munialo/ARCHS4-Regulatory-Network/main/drug_targets.csv';
         const drugResp = await fetch(drugUrl);
         const drugCsv = await drugResp.text();
@@ -638,7 +490,6 @@ async function loadRegulatoryNetwork() {
         if (rows.length < 2) throw new Error('No drug-target data');
         const headers = rows[0];
         const dataRows = rows.slice(1);
-
         let tableHtml = '<div class="table-responsive"><table class="table table-bordered table-striped"><thead><tr>';
         headers.forEach(h => tableHtml += `<th>${h}</th>`);
         tableHtml += '<th>Select</th></tr></thead><tbody>';
@@ -647,28 +498,10 @@ async function loadRegulatoryNetwork() {
             row.forEach(cell => tableHtml += `<td>${cell}</td>`);
             tableHtml += `<td><input type="radio" name="drugTarget" value="${idx}" onclick="selectDrugTarget(${idx}, '${row[0]}')"></td></tr>`;
         });
-        tableHtml += '</tbody></td></div>';
+        tableHtml += '</tbody></table></div>';
         drugTableDiv.innerHTML = tableHtml;
-
-        // Optional: load network stats if available
-        let summaryHtml = '';
-        try {
-            const statsUrl = 'https://raw.githubusercontent.com/jblumbasi-munialo/ARCHS4-Regulatory-Network/main/network_stats.json';
-            const statsResp = await fetch(statsUrl);
-            const stats = await statsResp.json();
-            summaryHtml = `
-                <div class="alert alert-info">
-                    <strong>Network Statistics</strong><br>
-                    Nodes: ${stats.nodes || 'N/A'}<br>
-                    Edges: ${stats.edges || 'N/A'}<br>
-                    Top regulators: ${stats.top_regulators ? stats.top_regulators.join(', ') : 'N/A'}
-                </div>
-            `;
-        } catch (e) {
-            summaryHtml = '<div class="alert alert-secondary">Summary statistics not available (network_stats.json missing).</div>';
-        }
+        let summaryHtml = '<div class="alert alert-secondary">Summary statistics not available.</div>';
         summaryDiv.innerHTML = summaryHtml;
-
         statusSpan.innerHTML = `✅ Loaded ${dataRows.length} drug-target interactions. Click a radio button and record to blockchain.`;
         addRecord("Regulatory Network", `Loaded ${dataRows.length} drug-target pairs`, 5);
     } catch (err) {
@@ -676,17 +509,12 @@ async function loadRegulatoryNetwork() {
         statusSpan.innerHTML = '❌ Failed to load';
     }
 }
-
 function selectDrugTarget(idx, drugGene) {
     currentDrugTarget = { idx, drugGene };
     document.getElementById('recordDrugTargetBtn').disabled = false;
 }
-
 async function recordCurrentDrugTarget() {
-    if (!currentDrugTarget) {
-        alert('Select a drug-target interaction first.');
-        return;
-    }
+    if (!currentDrugTarget) { alert('Select a drug-target interaction first.'); return; }
     addRecord("Drug Target Selection", `Selected target: ${currentDrugTarget.drugGene}`, 10);
     cm.showNotification(`Recorded target ${currentDrugTarget.drugGene} to blockchain! +10 BIO`);
     document.getElementById('recordDrugTargetBtn').disabled = true;
@@ -695,30 +523,18 @@ async function recordCurrentDrugTarget() {
 
 // ========== SURVIVAL ANALYSIS ==========
 let currentSurvivalStats = null;
-
 async function loadSurvivalData() {
     const statusSpan = document.getElementById('survivalStatus');
     const plotDiv = document.getElementById('kmPlot');
     const summaryDiv = document.getElementById('survivalSummary');
     statusSpan.innerHTML = 'Loading survival data...';
     plotDiv.innerHTML = '<div class="loading"></div>';
-
     try {
-        // First attempt to load from a local CSV file. If not found, generate demo survival data.
-        let url = './data/survival_analysis_results.csv'; // adjust to your actual file
+        let url = './data/survival_analysis_results.csv';
         let response = await fetch(url);
-        let csvText = '';
-        let useDemo = false;
-        if (!response.ok) {
-            // Fallback to demo data (simulate a small survival dataset)
-            useDemo = true;
-        } else {
-            csvText = await response.text();
-        }
-
+        let useDemo = !response.ok;
         let times = [], events = [], groups = [];
         if (useDemo) {
-            // Generate demo Kaplan-Meier data: two groups (Treatment vs Control)
             for (let i = 0; i < 100; i++) {
                 let isTreatment = Math.random() < 0.5;
                 let time = isTreatment ? Math.random() * 50 + 10 : Math.random() * 40 + 5;
@@ -729,7 +545,7 @@ async function loadSurvivalData() {
             }
             statusSpan.innerHTML = 'Demo survival data (no file found) – loaded demo.';
         } else {
-            // Parse real CSV: expect columns "time", "event", "group"
+            const csvText = await response.text();
             const rows = csvText.trim().split('\n').map(r => r.split(','));
             const headers = rows[0].map(h => h.toLowerCase());
             const timeIdx = headers.findIndex(h => h.includes('time'));
@@ -744,8 +560,6 @@ async function loadSurvivalData() {
             }
             statusSpan.innerHTML = `✅ Loaded survival data: ${times.length} patients.`;
         }
-
-        // Simple Kaplan-Meier by group
         const uniqueGroups = [...new Set(groups)];
         const traces = [];
         for (let g of uniqueGroups) {
@@ -755,8 +569,7 @@ async function loadSurvivalData() {
             const sorted = grpTimes.map((t, i) => ({t, e: grpEvents[i]})).sort((a,b) => a.t - b.t);
             let survival = 1.0;
             let atRisk = sorted.length;
-            let x = [0];
-            let y = [1.0];
+            let x = [0], y = [1.0];
             for (let i = 0; i < sorted.length; i++) {
                 const {t, e} = sorted[i];
                 if (e === 1) {
@@ -766,43 +579,19 @@ async function loadSurvivalData() {
                 }
                 atRisk--;
             }
-            traces.push({
-                x: x,
-                y: y,
-                mode: 'lines',
-                name: g,
-                line: { width: 3 },
-                type: 'scatter'
-            });
+            traces.push({ x: x, y: y, mode: 'lines', name: g, line: { width: 3 }, type: 'scatter' });
         }
-
         const layout = {
             title: 'Kaplan‑Meier Survival Curves',
             xaxis: { title: 'Time (days / months)' },
             yaxis: { title: 'Survival Probability', range: [0, 1] },
-            plot_bgcolor: 'white',
-            paper_bgcolor: 'white',
-            font: { color: '#1a1a1a' },
-            hovermode: 'closest',
-            legend: { x: 0.8, y: 0.9 }
+            plot_bgcolor: 'white', paper_bgcolor: 'white', font: { color: '#1a1a1a' }, hovermode: 'closest', legend: { x: 0.8, y: 0.9 }
         };
         Plotly.newPlot('kmPlot', traces, layout);
-
-        // Summary stats
         const totalPatients = times.length;
         const eventsCount = events.filter(e => e === 1).length;
-        summaryDiv.innerHTML = `
-            <div class="alert alert-info">
-                <strong>Summary</strong><br>
-                Total patients: ${totalPatients}<br>
-                Events (deaths / progression): ${eventsCount}<br>
-                Groups: ${uniqueGroups.join(', ')}
-            </div>
-        `;
-
-        // Store stats for blockchain recording
+        summaryDiv.innerHTML = `<div class="alert alert-info"><strong>Summary</strong><br>Total patients: ${totalPatients}<br>Events: ${eventsCount}<br>Groups: ${uniqueGroups.join(', ')}</div>`;
         currentSurvivalStats = { totalPatients, eventsCount, groups: uniqueGroups };
-
         addRecord("Survival Analysis", `Loaded survival data (n=${totalPatients})`, 5);
     } catch (err) {
         plotDiv.innerHTML = `<p class="text-danger">Error loading survival data: ${err.message}</p>`;
@@ -810,21 +599,16 @@ async function loadSurvivalData() {
         console.error(err);
     }
 }
-
 async function recordSurvivalAnalysis() {
-    if (!currentSurvivalStats) {
-        alert('Load survival data first.');
-        return;
-    }
+    if (!currentSurvivalStats) { alert('Load survival data first.'); return; }
     addRecord("Survival Analysis", `Total=${currentSurvivalStats.totalPatients}, events=${currentSurvivalStats.eventsCount}, groups=${currentSurvivalStats.groups.join(',')}`, 10);
     cm.showNotification(`Survival analysis recorded to blockchain! +10 BIO`);
 }
 
 // ========== FLOATING CHATBOT WITH MEMORY ==========
 let conversationHistory = [
-    { role: "system", content: "You are a helpful scientific assistant for BioWeb3. The platform offers: protein sequence analysis, AlphaFold, docking, blockchain, KES pricing, profile, bioimaging, CRISPR analysis, drug discovery, GO enrichment, genome viewer, differential expression pipeline, regulatory network/drug target analysis, and survival analysis (Kaplan-Meier). Answer only science questions. Redirect off-topic politely." }
+    { role: "system", content: "You are a helpful scientific assistant for BioWeb3. The platform offers: protein sequence analysis, AlphaFold, docking, blockchain, KES pricing, profile, bioimaging, CRISPR analysis, drug discovery, GO enrichment, genome viewer, differential expression pipeline, regulatory network/drug target analysis, and survival analysis (Kaplan‑Meier). Answer only science questions. Redirect off-topic politely." }
 ];
-
 function addChatMessage(sender, text, type = 'user') {
     const container = document.getElementById('chatbotMessages');
     if (!container) return;
@@ -834,16 +618,13 @@ function addChatMessage(sender, text, type = 'user') {
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 }
-
 async function sendChatMessage() {
     const input = document.getElementById('chatbotInput');
     const question = input.value.trim();
     if (!question) return;
     input.value = '';
-
     conversationHistory.push({ role: "user", content: question });
     addChatMessage('You', question, 'user');
-
     try {
         const response = await fetch('/api/chat', {
             method: 'POST',
@@ -863,15 +644,11 @@ async function sendChatMessage() {
         console.error(err);
     }
 }
-
 function clearChatHistory() {
     conversationHistory = [conversationHistory[0]];
     const container = document.getElementById('chatbotMessages');
-    if (container) {
-        container.innerHTML = '<div class="message-bubble system-bubble">Chat cleared. Ask me about bioinformatics, protein structures, drug discovery, or how to use this platform.</div>';
-    }
+    if (container) container.innerHTML = '<div class="message-bubble system-bubble">Chat cleared. Ask me about bioinformatics, protein structures, drug discovery, or how to use this platform.</div>';
 }
-
 let chatbotOpen = false;
 function toggleChatbot() {
     const win = document.getElementById('chatbotWindow');
@@ -885,14 +662,9 @@ function closeChatbot() {
     const win = document.getElementById('chatbotWindow');
     if (win) win.style.display = 'none';
 }
-
 function setupChatbotEvents() {
     const input = document.getElementById('chatbotInput');
-    if (input) {
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendChatMessage();
-        });
-    }
+    if (input) input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChatMessage(); });
     const sendBtn = document.getElementById('chatbotSendBtn');
     if (sendBtn) sendBtn.addEventListener('click', sendChatMessage);
     const toggleBtn = document.getElementById('chatbotToggleBtn');
@@ -911,7 +683,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     setupChatbotEvents();
     const profileTab = document.querySelector('#mainTab button[data-bs-target="#profile"]');
-    if (profileTab) {
-        profileTab.addEventListener('shown.bs.tab', () => displayProfile());
-    }
+    if (profileTab) profileTab.addEventListener('shown.bs.tab', () => displayProfile());
 });
