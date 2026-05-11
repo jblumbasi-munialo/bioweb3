@@ -790,6 +790,17 @@ function initHealthcare50() {
 }
 
 // ========== INITIALIZATION ==========
+// Initialize Healthcare 5.0 tab when shown
+const hcTab = document.querySelector('#mainTab button[data-bs-target="#healthcare50"]');
+if (hcTab) {
+    hcTab.addEventListener('shown.bs.tab', () => {
+        initHealthcare50();
+        // Prepopulate metrics area
+        if (document.getElementById('idsMetrics').innerHTML === '') {
+            document.getElementById('idsMetrics').innerHTML = `<div class="alert alert-secondary">Click "Test Random Sample" to see intrusion detection predictions.</div>`;
+        }
+    });
+}
 document.addEventListener('DOMContentLoaded', () => {
     const walletBtn = document.getElementById('connectWallet');
     if (walletBtn) walletBtn.addEventListener('click', connectWallet);
