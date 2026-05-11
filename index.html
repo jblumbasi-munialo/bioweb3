@@ -181,12 +181,93 @@
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#genomicviewer">🔬 Genome Viewer</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#runpipe">⚙️ Run DEG Pipeline</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#regnet">🔗 Regulatory Network</button></li>
-     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#healthcare50">🏥 Healthcare 5.0</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#healthcare50">🏥 Healthcare 5.0</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#survival">📉 Survival Analysis</button></li>
     </ul>
 
     <div class="tab-content">
         <!-- ========== EXISTING TABS ========== -->
+        <!-- Healthcare 5.0 Tab (Federated Learning + Intrusion Detection) -->
+<div class="tab-pane fade" id="healthcare50">
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-brain"></i> Blockchain + Federated Learning for Healthcare 5.0
+        </div>
+        <div class="card-body">
+            <ul class="nav nav-tabs" id="healthcareSubTab" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#flTab">🤝 Federated Learning</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#idsTab">🛡️ Intrusion Detection</button>
+                </li>
+            </ul>
+            <div class="tab-content mt-3">
+                <!-- Federated Learning Sub-tab -->
+                <div class="tab-pane fade show active" id="flTab">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h5>Simulate Federated Learning</h5>
+                                    <p>Train 4 clients (hospitals) on Parkinson's disease data without sharing raw patient records.</p>
+                                    <button class="btn btn-primary" id="startFLBtn">Start Federated Learning</button>
+                                    <div id="flProgress" class="mt-3" style="display:none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h5>Global Model Accuracy</h5>
+                                    <div id="flChart" style="height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <strong>Paper reference:</strong> Proposed Healthcare 5.0 system entangled with FL achieves 97% accuracy for Parkinson's prediction (Table 6).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Intrusion Detection Sub-tab -->
+                <div class="tab-pane fade" id="idsTab">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h5>Test Intrusion Detection System</h5>
+                                    <p>Analyze network traffic sample (NSL-KDD) to detect malicious activity.</p>
+                                    <button class="btn btn-primary" id="testIDSBtn">Test Random Sample</button>
+                                    <div id="idsResult" class="mt-3" style="display:none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h5>Performance Metrics (Paper Table 5)</h5>
+                                    <div id="idsMetrics"></div>
+                                    <div id="confusionMatrix" style="height: 200px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert alert-success">
+                                <strong>Paper result:</strong> RTS-DELM based IDS achieves 96.18% accuracy (validation, Table 5).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
         <!-- Sequence analysis tab -->
         <div class="tab-pane fade show active" id="seq">
             <div class="row">
