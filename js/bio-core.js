@@ -674,6 +674,120 @@ function setupChatbotEvents() {
     const closeBtn = document.getElementById('closeChatbotBtn');
     if (closeBtn) closeBtn.addEventListener('click', closeChatbot);
 }
+// ========== HEALTHCARE 5.0: FEDERATED LEARNING ==========
+let flChart = null;
+let flRound = 0;
+let flAccuracies = [];
+let flRunning = false;
+
+async function runFederatedLearning() {
+    if (flRunning) return;
+    flRunning = true;
+    document.getElementById('flProgress').style.display = 'block';
+    const progressDiv = document.getElementById('flProgress');
+    flRound = 0;
+    flAccuracies = [];
+
+    // Initialize chart
+    if (flChart) {
+        Plotly.purge('flChart');
+    }
+    flChart = Plotly.newPlot('flChart', [{
+        x: [],
+        y: [],
+        mode: 'lines+markers',
+        name: 'Global Accuracy',
+        line: { color: '#2e7d32', width: 2 }
+    }], {
+        title: 'Federated Learning Rounds',
+        xaxis: { title: 'Round', range: [0, 10] },
+        yaxis: { title: 'Accuracy', range: [0.5, 1.0] },
+        paper_bgcolor: 'white',
+        plot_bgcolor: 'white'
+    });
+
+    for (let round = 1; round <= 10; round++) {
+        progressDiv.innerHTML = `<div class="loading"></div> Round ${round}/10 – Training local clients...`;
+        try {
+            const response = await fetch('/api/federated_learning', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ round: round-1, clients: 4 })
+            });
+            const data = await response.json();
+            flAccuracies.push(data.global_accuracy);
+            Plotly.extendTraces('flChart', { x: [[round]], y: [[data.global_accuracy]] }, [0]);
+            // Record blockchain entry for each round
+            addRecord("Federated Learning", `Round ${round} accuracy: ${(data.global_accuracy*100).toFixed(2)}%`, 5);
+            progressDiv.innerHTML = `<div class="text-success">✅ Round ${round} completed – accuracy ${(data.global_accuracy*100).toFixed(2)}%</div>`;
+            await new Promise(r => setTimeout(r, 800)); // simulate training delay
+        } catch (err) {
+            progressDiv.innerHTML = `<div class="text-danger">Error: ${err.message}</div>`;
+            break;
+        }
+    }
+    progressDiv.innerHTML = '<div class="alert alert-success">Federated learning completed! Global model accuracy: ' + (flAccuracies[flAccuracies.length-1]*100).toFixed(2) + '%</div>';
+    flRunning = false;
+}
+
+// ========== HEALTHCARE 5.0: INTRUSION DETECTION ==========
+async function testIntrusionSample() {
+    const resultDiv = document.getElementById('idsResult');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<div class="loading"></div> Analyzing network packet...';
+
+    try {
+        const response = await fetch('/api/intrusion_detection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sample: 'random' })
+        });
+        const data = await response.json();
+        const metrics = data.metrics;
+        const predictionClass = data.prediction === 'attack' ? 'danger' : 'success';
+        resultDiv.innerHTML = `
+            <div class="alert alert-${predictionClass}">
+                <strong>Prediction:</strong> ${data.prediction.toUpperCase()} (confidence: ${(data.confidence*100).toFixed(1)}%)
+            </div>
+            <table class="table table-sm table-bordered mt-2">
+                <tr><th>Accuracy</th><td>${(metrics.accuracy*100).toFixed(2)}%</td></tr>
+                <tr><th>Sensitivity (TPR)</th><td>${(metrics.sensitivity*100).toFixed(2)}%</td></tr>
+                <tr><th>Specificity (TNR)</th><td>${(metrics.specificity*100).toFixed(2)}%</td></tr>
+                <tr><th>False Positive Rate</th><td>${(metrics.false_positive_rate*100).toFixed(2)}%</td></tr>
+                <tr><th>False Negative Rate</th><td>${(metrics.false_negative_rate*100).toFixed(2)}%</td></tr>
+            </table>
+        `;
+        // Display fixed metrics from paper for comparison
+        document.getElementById('idsMetrics').innerHTML = `
+            <div class="alert alert-secondary">
+                <strong>Paper's validation results (Table 5):</strong><br>
+                Accuracy: 96.5% (Client H3)<br>
+                Sensitivity: 98.64%<br>
+                Specificity: 90.57%<br>
+                False Positive Rate: 9.43%
+            </div>
+        `;
+        addRecord("Intrusion Detection", `Predicted: ${data.prediction}, confidence: ${(data.confidence*100).toFixed(1)}%`, 10);
+    } catch (err) {
+        resultDiv.innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
+    }
+}
+
+// Attach event listeners after DOM ready (add inside existing DOMContentLoaded)
+// But we also need to attach them when the Healthcare 5.0 tab is shown (to avoid duplicates)
+// We'll add them in a function that runs once.
+function initHealthcare50() {
+    const flBtn = document.getElementById('startFLBtn');
+    if (flBtn && !flBtn.hasListener) {
+        flBtn.addEventListener('click', runFederatedLearning);
+        flBtn.hasListener = true;
+    }
+    const idsBtn = document.getElementById('testIDSBtn');
+    if (idsBtn && !idsBtn.hasListener) {
+        idsBtn.addEventListener('click', testIntrusionSample);
+        idsBtn.hasListener = true;
+    }
+}
 
 // ========== INITIALIZATION ==========
 document.addEventListener('DOMContentLoaded', () => {
