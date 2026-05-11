@@ -2,7 +2,6 @@ import json
 import random
 
 def handler(request):
-    # request is a dictionary with keys: method, body, headers, etc.
     if request.get('method') != 'POST':
         return {'statusCode': 405, 'body': json.dumps({'error': 'Method not allowed'})}
     
