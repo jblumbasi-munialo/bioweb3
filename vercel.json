@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/intrusion_detection.py": {
+      "runtime": "@vercel/python@4.0.0"
+    },
+    "api/federated_learning.py": {
+      "runtime": "@vercel/python@4.0.0"
+    }
+  }
+}
