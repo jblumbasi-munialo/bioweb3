@@ -4,7 +4,6 @@ import random
 def handler(request):
     if request.get('method') != 'POST':
         return {'statusCode': 405, 'body': json.dumps({'error': 'Method not allowed'})}
-    
     is_attack = random.random() < 0.4
     metrics = {
         'accuracy': 0.9618,
