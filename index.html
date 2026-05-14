@@ -12,7 +12,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Floating Chatbot Styles (same as before) */
+        /* Floating Chatbot Styles */
         .chatbot-float { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
         .chatbot-toggle { background: linear-gradient(135deg, #2c7a47, #1e5a34); border: none; border-radius: 50px; padding: 12px 24px; color: white; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.3s ease; }
         .chatbot-toggle:hover { transform: scale(1.05); background: linear-gradient(135deg, #1e5a34, #0d3b0f); }
@@ -80,11 +80,10 @@
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#regnet">🔗 Regulatory Network</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#survival">📉 Survival Analysis</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#healthcare50">🏥 Healthcare 5.0</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pgxSubTab">💊 PGx Vault</button></li>
     </ul>
 
     <div class="tab-content">
-        <!-- ========== EXISTING TABS ========== -->
+        <!-- ========== EXISTING TABS (keep as before) ========== -->
         <!-- Sequence analysis tab -->
         <div class="tab-pane fade show active" id="seq">
             <div class="row">
@@ -336,7 +335,7 @@
             </div>
         </div>
 
-        <!-- ========== HEALTHCARE 5.0 TAB ========== -->
+        <!-- ========== HEALTHCARE 5.0 TAB (with 3 sub‑tabs) ========== -->
         <div class="tab-pane fade" id="healthcare50">
             <div class="card">
                 <div class="card-header"><i class="fas fa-brain"></i> Blockchain + Federated Learning for Healthcare 5.0</div>
@@ -344,6 +343,7 @@
                     <ul class="nav nav-tabs" id="healthcareSubTab" role="tablist">
                         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#flTab">🤝 Federated Learning</button></li>
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#idsTab">🛡️ Intrusion Detection</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pgxSubTab">💊 PGx Vault</button></li>
                     </ul>
                     <div class="tab-content mt-3">
                         <!-- Federated Learning Sub-tab -->
@@ -402,38 +402,38 @@
                                 <div class="col-12">
                                     <div class="alert alert-success">
                                         <strong>Paper result:</strong> RTS-DELM based IDS achieves 96.18% accuracy (validation, Table 5).
-                            <!-- PGx Vault Sub‑tab -->
-<div class="tab-pane fade" id="pgxSubTab">
-    <div class="card">
-        <div class="card-header"><i class="fas fa-dna"></i> Pharmacogenomic Data Vault</div>
-        <div class="card-body">
-            <form id="pgxForm">
-                <div class="mb-3">
-                    <label class="form-label">Gene Symbol</label>
-                    <input type="text" id="pgxGene" class="form-control" placeholder="e.g., CYP2C19" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Variant</label>
-                    <input type="text" id="pgxVariant" class="form-control" placeholder="e.g., *2" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Drug</label>
-                    <input type="text" id="pgxDrug" class="form-control" placeholder="e.g., Clopidogrel (Plavix)" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Clinical Recommendation</label>
-                    <textarea id="pgxRec" class="form-control" rows="2" placeholder="e.g., Reduced efficacy, consider alternative"></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary">Add PGx Entry</button>
-            </form>
-            <hr>
-            <h5>My PGx Entries</h5>
-            <div id="pgxEntriesList" class="mt-2">
-                <p class="text-muted">No entries yet. Add your first pharmacogenomic interaction.</p>
-            </div>
-        </div>
-    </div>
-</div>  
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- PGx Vault Sub-tab -->
+                        <div class="tab-pane fade" id="pgxSubTab">
+                            <div class="card">
+                                <div class="card-header"><i class="fas fa-dna"></i> Pharmacogenomic Data Vault</div>
+                                <div class="card-body">
+                                    <form id="pgxForm">
+                                        <div class="mb-3">
+                                            <label class="form-label">Gene Symbol</label>
+                                            <input type="text" id="pgxGene" class="form-control" placeholder="e.g., CYP2C19" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Variant</label>
+                                            <input type="text" id="pgxVariant" class="form-control" placeholder="e.g., *2" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Drug</label>
+                                            <input type="text" id="pgxDrug" class="form-control" placeholder="e.g., Clopidogrel (Plavix)" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Clinical Recommendation</label>
+                                            <textarea id="pgxRec" class="form-control" rows="2" placeholder="e.g., Reduced efficacy, consider alternative"></textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Add PGx Entry</button>
+                                    </form>
+                                    <hr>
+                                    <h5>My PGx Entries</h5>
+                                    <div id="pgxEntriesList" class="mt-2">
+                                        <p class="text-muted">No entries yet. Add your first pharmacogenomic interaction.</p>
                                     </div>
                                 </div>
                             </div>
