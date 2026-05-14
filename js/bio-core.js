@@ -798,6 +798,12 @@ if (hcTab) {
         // Prepopulate metrics area
         if (document.getElementById('idsMetrics').innerHTML === '') {
             document.getElementById('idsMetrics').innerHTML = `<div class="alert alert-secondary">Click "Test Random Sample" to see intrusion detection predictions.</div>`;
+        const pgxForm = document.getElementById('pgxForm');
+if (pgxForm && !pgxForm.hasListener) {
+    pgxForm.addEventListener('submit', addPGxEntry);
+    pgxForm.hasListener = true;
+}
+loadPGxEntries();
         }
     });
 }
