@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BioWeb3 | HCMI-CMDC Molecular Medicine</title>
+    <title>BioWeb3 | Decentralized Bioinformatics + Blockchain</title>
     <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-3.0.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.1/3Dmol-min.js"></script>
@@ -12,7 +12,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Floating Chatbot Styles */
+        /* Floating Chatbot Styles (identical to existing) */
         .chatbot-float { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
         .chatbot-toggle { background: linear-gradient(135deg, #2c7a47, #1e5a34); border: none; border-radius: 50px; padding: 12px 24px; color: white; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.3s ease; }
         .chatbot-toggle:hover { transform: scale(1.05); background: linear-gradient(135deg, #1e5a34, #0d3b0f); }
@@ -27,7 +27,7 @@
         .user-bubble { background: #2c7a47; color: white; padding: 8px 12px; border-radius: 18px 18px 4px 18px; float: right; }
         .bot-bubble { background: #e9ecef; color: #1a1a1a; padding: 8px 12px; border-radius: 18px 18px 18px 4px; float: left; }
         .system-bubble { background: #fff3cd; color: #856404; text-align: center; font-size: 12px; padding: 5px; border-radius: 10px; clear: both; }
-        @media (max-width: 480px) { .chatbot-window { width: 300px; height: 450px; right: 10px; bottom: 70px; } }
+        @media (max-width: 480px) { .chatbot-window { width: 300px; height: 450px; } }
         .table-variants, .crispr-table, .drug-table, .go-table, .regnet-table { font-size: 13px; }
         #igvContainer { height: 600px; border: 1px solid #ddd; border-radius: 8px; background: white; }
     </style>
@@ -44,7 +44,7 @@
 <div class="container" style="margin-top: 80px;">
     <div class="text-center mb-4">
         <h1 class="display-4 fw-bold">🧬 Decentralized Bioinformatics</h1>
-        <p class="lead">HCMI-CMDC Integration | Survival Analysis | Drug Targets | DEG Pipeline | Genome Browser | Healthcare 5.0</p>
+        <p class="lead">Healthcare 5.0 | Blockchain | Federated Learning | PGx Vault | Research Aggregator</p>
     </div>
 
     <div class="row mb-4">
@@ -80,11 +80,11 @@
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#regnet">🔗 Regulatory Network</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#survival">📉 Survival Analysis</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#healthcare50">🏥 Healthcare 5.0</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#researchAgg">📊 Research Aggregator</button></li>
     </ul>
 
     <div class="tab-content">
-        <!-- ========== EXISTING TABS (keep as before) ========== -->
-        <!-- Sequence analysis tab -->
+        <!-- ===== SEQUENCE TAB (existing) ===== -->
         <div class="tab-pane fade show active" id="seq">
             <div class="row">
                 <div class="col-md-6">
@@ -106,7 +106,7 @@
             </div>
         </div>
 
-        <!-- AlphaFold / UniProt search tab -->
+        <!-- ===== ALPHAFOLD TAB (existing) ===== -->
         <div class="tab-pane fade" id="structure">
             <div class="row">
                 <div class="col-md-6">
@@ -138,7 +138,7 @@
             </div>
         </div>
 
-        <!-- Docking tab -->
+        <!-- ===== DOCKING TAB (existing) ===== -->
         <div class="tab-pane fade" id="docking">
             <div class="card">
                 <div class="card-header"><i class="fas fa-capsules"></i> Molecular Docking</div>
@@ -150,7 +150,7 @@
             </div>
         </div>
 
-        <!-- Blockchain ledger -->
+        <!-- ===== BLOCKCHAIN LEDGER TAB (existing) ===== -->
         <div class="tab-pane fade" id="blockchain">
             <div class="card">
                 <div class="card-header"><i class="fas fa-link"></i> Immutable Research Ledger</div>
@@ -161,7 +161,7 @@
             </div>
         </div>
 
-        <!-- Pricing KES -->
+        <!-- ===== PRICING KES TAB (existing) ===== -->
         <div class="tab-pane fade" id="pricing">
             <div class="card">
                 <div class="card-header"><i class="fas fa-tag"></i> Drug Prices (Kenya Shillings)</div>
@@ -175,14 +175,12 @@
             </div>
         </div>
 
-        <!-- Profile Tab -->
+        <!-- ===== PROFILE TAB (existing) ===== -->
         <div class="tab-pane fade" id="profile">
             <div class="card">
                 <div class="card-header"><i class="fas fa-user-circle"></i> Your BioWeb3 Profile</div>
                 <div class="card-body">
-                    <div id="profileInfo" class="text-center">
-                        <p>Connect your wallet to view your profile.</p>
-                    </div>
+                    <div id="profileInfo" class="text-center"><p>Connect your wallet to view your profile.</p></div>
                     <div id="savedItems" class="mt-3"></div>
                     <button class="btn btn-outline-danger mt-3" onclick="clearUserData()">Clear my data</button>
                     <button class="btn btn-outline-success mt-3 ms-2" onclick="saveUserProfile()">Save current data</button>
@@ -190,7 +188,7 @@
             </div>
         </div>
 
-        <!-- Bioimaging Tab (Vizarr) -->
+        <!-- ===== BIOIMAGING TAB (Vizarr) ===== -->
         <div class="tab-pane fade" id="bioimaging">
             <div class="card">
                 <div class="card-header"><i class="fas fa-microscope"></i> Bioimaging Viewer (OME-Zarr)</div>
@@ -214,56 +212,44 @@
             </div>
         </div>
 
-        <!-- CRISPR Analysis Tab -->
+        <!-- ===== CRISPR TAB ===== -->
         <div class="tab-pane fade" id="crispr">
             <div class="card">
                 <div class="card-header"><i class="fas fa-dna"></i> CRISPR Off‑Target Analysis</div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <button class="btn btn-primary btn-sm" onclick="loadCrisprData()">Load CRISPR Data</button>
-                        <span id="crisprStatus" class="ms-2 text-muted"></span>
-                    </div>
-                    <div id="crisprTable" style="overflow-x: auto;">
-                        <p class="text-muted">Click load to view off‑target predictions from your HCMI-CMDC repository.</p>
-                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="loadCrisprData()">Load CRISPR Data</button>
+                    <span id="crisprStatus" class="ms-2"></span>
+                    <div id="crisprTable" class="mt-2"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Drug Discovery Tab -->
+        <!-- ===== DRUG DISCOVERY TAB ===== -->
         <div class="tab-pane fade" id="drugdiscovery">
             <div class="card">
                 <div class="card-header"><i class="fas fa-capsules"></i> Drug Discovery & Clinical Trials</div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <button class="btn btn-primary btn-sm" onclick="loadDrugData()">Load Drug Data</button>
-                        <span id="drugStatus" class="ms-2 text-muted"></span>
-                    </div>
-                    <div id="drugTable" style="overflow-x: auto;">
-                        <p class="text-muted">Click load to view drug candidates and trial opportunities.</p>
-                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="loadDrugData()">Load Drug Data</button>
+                    <span id="drugStatus" class="ms-2"></span>
+                    <div id="drugTable" class="mt-2"></div>
                 </div>
             </div>
         </div>
 
-        <!-- GO Enrichment Tab -->
+        <!-- ===== GO ENRICHMENT TAB ===== -->
         <div class="tab-pane fade" id="goenrichment">
             <div class="card">
                 <div class="card-header"><i class="fas fa-chart-pie"></i> Gene Ontology Enrichment</div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <button class="btn btn-primary btn-sm" onclick="loadGOData()">Load GO Results</button>
-                        <span id="goStatus" class="ms-2 text-muted"></span>
-                    </div>
-                    <div id="goTable" style="overflow-x: auto;">
-                        <p class="text-muted">Click load to view enriched GO terms.</p>
-                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="loadGOData()">Load GO Results</button>
+                    <span id="goStatus" class="ms-2"></span>
+                    <div id="goTable" class="mt-2"></div>
                     <div id="goChart" style="height: 400px; margin-top: 20px;"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Genomic Viewer Tab (IGV.js) -->
+        <!-- ===== GENOMIC VIEWER (IGV.js) ===== -->
         <div class="tab-pane fade" id="genomicviewer">
             <div class="card">
                 <div class="card-header"><i class="fas fa-chromosome"></i> Interactive Genome Browser (IGV.js)</div>
@@ -280,62 +266,49 @@
             </div>
         </div>
 
-        <!-- Run Differential Expression Pipeline Tab -->
+        <!-- ===== RUN DEG PIPELINE TAB ===== -->
         <div class="tab-pane fade" id="runpipe">
             <div class="card">
                 <div class="card-header"><i class="fas fa-cogs"></i> Run DEG Pipeline (Upload Count Matrix)</div>
                 <div class="card-body">
-                    <p>Upload a CSV file with genes as rows and samples as columns. First column = gene names. At least 2 control and 2 treatment samples.</p>
-                    <div class="mb-3">
-                        <input type="file" id="degCountFile" accept=".csv" class="form-control">
-                        <button class="btn btn-primary mt-2" onclick="runDEGPipeline()">Run Analysis</button>
-                    </div>
-                    <div id="pipelineStatus" class="result-box" style="display:none"></div>
+                    <p>Upload CSV (genes rows, samples columns). At least 2 control + 2 treatment.</p>
+                    <input type="file" id="degCountFile" accept=".csv" class="form-control">
+                    <button class="btn btn-primary mt-2" onclick="runDEGPipeline()">Run Analysis</button>
+                    <div id="pipelineStatus" class="result-box mt-2" style="display:none"></div>
                     <div id="pipelineResults"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Regulatory Network & Drug Targets Tab -->
+        <!-- ===== REGULATORY NETWORK TAB ===== -->
         <div class="tab-pane fade" id="regnet">
             <div class="card">
                 <div class="card-header"><i class="fas fa-project-diagram"></i> Regulatory Network & Drug Targets</div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <button class="btn btn-primary btn-sm" onclick="loadRegulatoryNetwork()">Load Network Data</button>
-                        <span id="regnetStatus" class="ms-2 text-muted"></span>
-                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="loadRegulatoryNetwork()">Load Network Data</button>
+                    <span id="regnetStatus" class="ms-2"></span>
                     <div id="regnetSummary" class="mb-3"></div>
-                    <h5>Drug‑Gene Interactions</h5>
-                    <div id="drugTargetTable" style="overflow-x: auto;">
-                        <p class="text-muted">Click load to view drug targets derived from your regulatory network.</p>
-                    </div>
-                    <div class="mt-3">
-                        <button id="recordDrugTargetBtn" class="btn btn-outline-success" disabled onclick="recordCurrentDrugTarget()">Record selected target to blockchain</button>
-                    </div>
+                    <div id="drugTargetTable"></div>
+                    <button id="recordDrugTargetBtn" class="btn btn-outline-success mt-3" disabled onclick="recordCurrentDrugTarget()">Record selected target to blockchain</button>
                 </div>
             </div>
         </div>
 
-        <!-- Survival Analysis Tab -->
+        <!-- ===== SURVIVAL ANALYSIS TAB ===== -->
         <div class="tab-pane fade" id="survival">
             <div class="card">
                 <div class="card-header"><i class="fas fa-chart-line"></i> Survival Analysis (Kaplan‑Meier)</div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <button class="btn btn-primary btn-sm" onclick="loadSurvivalData()">Load Survival Data</button>
-                        <span id="survivalStatus" class="ms-2 text-muted"></span>
-                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="loadSurvivalData()">Load Survival Data</button>
+                    <span id="survivalStatus" class="ms-2"></span>
                     <div id="kmPlot" style="height: 500px;"></div>
                     <div id="survivalSummary" class="mt-3"></div>
-                    <div class="mt-3">
-                        <button id="recordSurvivalBtn" class="btn btn-outline-success" onclick="recordSurvivalAnalysis()">Record analysis to blockchain</button>
-                    </div>
+                    <button id="recordSurvivalBtn" class="btn btn-outline-success mt-3" onclick="recordSurvivalAnalysis()">Record analysis to blockchain</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========== HEALTHCARE 5.0 TAB (with 3 sub‑tabs) ========== -->
+        <!-- ===== HEALTHCARE 5.0 TAB (with 3 sub-tabs) ===== -->
         <div class="tab-pane fade" id="healthcare50">
             <div class="card">
                 <div class="card-header"><i class="fas fa-brain"></i> Blockchain + Federated Learning for Healthcare 5.0</div>
@@ -352,10 +325,9 @@
                                 <div class="col-md-6">
                                     <div class="card border-0 shadow-sm">
                                         <div class="card-body">
-                                            <h5>Simulate Federated Learning</h5>
-                                            <p>Train 4 clients (hospitals) on Parkinson's disease data without sharing raw patient records.</p>
+                                            <h5>Simulate Federated Learning (privacy‑preserving)</h5>
                                             <button class="btn btn-primary" id="startFLBtn">Start Federated Learning</button>
-                                            <div id="flProgress" class="mt-3" style="display:none;"></div>
+                                            <div id="flProgress" class="mt-3"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -368,13 +340,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="row mt-3">
-                                <div class="col-12">
-                                    <div class="alert alert-info">
-                                        <strong>Paper reference:</strong> Proposed Healthcare 5.0 system entangled with FL achieves 97% accuracy for Parkinson's prediction (Table 6).
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                         <!-- Intrusion Detection Sub-tab -->
                         <div class="tab-pane fade" id="idsTab">
@@ -383,25 +348,14 @@
                                     <div class="card border-0 shadow-sm">
                                         <div class="card-body">
                                             <h5>Test Intrusion Detection System</h5>
-                                            <p>Analyze network traffic sample (NSL-KDD) to detect malicious activity.</p>
                                             <button class="btn btn-primary" id="testIDSBtn">Test Random Sample</button>
-                                            <div id="idsResult" class="mt-3" style="display:none;"></div>
+                                            <div id="idsResult" class="mt-3"></div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="card border-0 shadow-sm">
-                                        <div class="card-body">
-                                            <h5>Performance Metrics (Paper Table 5)</h5>
-                                            <div id="idsMetrics"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-12">
-                                    <div class="alert alert-success">
-                                        <strong>Paper result:</strong> RTS-DELM based IDS achieves 96.18% accuracy (validation, Table 5).
+                                        <div class="card-body"><div id="idsMetrics"></div></div>
                                     </div>
                                 </div>
                             </div>
@@ -412,29 +366,15 @@
                                 <div class="card-header"><i class="fas fa-dna"></i> Pharmacogenomic Data Vault</div>
                                 <div class="card-body">
                                     <form id="pgxForm">
-                                        <div class="mb-3">
-                                            <label class="form-label">Gene Symbol</label>
-                                            <input type="text" id="pgxGene" class="form-control" placeholder="e.g., CYP2C19" required>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Variant</label>
-                                            <input type="text" id="pgxVariant" class="form-control" placeholder="e.g., *2" required>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Drug</label>
-                                            <input type="text" id="pgxDrug" class="form-control" placeholder="e.g., Clopidogrel (Plavix)" required>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Clinical Recommendation</label>
-                                            <textarea id="pgxRec" class="form-control" rows="2" placeholder="e.g., Reduced efficacy, consider alternative"></textarea>
-                                        </div>
+                                        <div class="mb-2"><input type="text" id="pgxGene" class="form-control" placeholder="Gene (e.g., CYP2C19)" required></div>
+                                        <div class="mb-2"><input type="text" id="pgxVariant" class="form-control" placeholder="Variant (e.g., *2)" required></div>
+                                        <div class="mb-2"><input type="text" id="pgxDrug" class="form-control" placeholder="Drug (e.g., Plavix)" required></div>
+                                        <div class="mb-2"><textarea id="pgxRec" class="form-control" rows="2" placeholder="Clinical recommendation"></textarea></div>
                                         <button type="submit" class="btn btn-primary">Add PGx Entry</button>
                                     </form>
                                     <hr>
                                     <h5>My PGx Entries</h5>
-                                    <div id="pgxEntriesList" class="mt-2">
-                                        <p class="text-muted">No entries yet. Add your first pharmacogenomic interaction.</p>
-                                    </div>
+                                    <div id="pgxEntriesList"></div>
                                 </div>
                             </div>
                         </div>
@@ -442,26 +382,31 @@
                 </div>
             </div>
         </div>
+
+        <!-- ===== RESEARCH AGGREGATOR TAB (NEW) ===== -->
+        <div class="tab-pane fade" id="researchAgg">
+            <div class="card">
+                <div class="card-header"><i class="fas fa-chart-line"></i> Privacy‑Preserving Data Aggregator</div>
+                <div class="card-body">
+                    <p>Opt in to share de‑identified variant counts for research. You earn <strong>5 BIO</strong> per contribution.</p>
+                    <button class="btn btn-primary" id="optInBtn">Opt In & Share My Data</button>
+                    <div id="aggStatus" class="mt-2"></div>
+                    <hr>
+                    <h5>Aggregated Counts (from opted-in users)</h5>
+                    <div id="aggregatedData"></div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- FLOATING CHATBOT -->
+<!-- FLOATING CHATBOT (same as before) -->
 <div class="chatbot-float">
-    <button class="chatbot-toggle" id="chatbotToggleBtn">
-        <i class="fas fa-robot"></i> AI Assistant
-    </button>
+    <button class="chatbot-toggle" id="chatbotToggleBtn"><i class="fas fa-robot"></i> AI Assistant</button>
     <div class="chatbot-window" id="chatbotWindow">
-        <div class="chatbot-header">
-            <span><i class="fas fa-robot"></i> BioWeb3 AI</span>
-            <button id="closeChatbotBtn">&times;</button>
-        </div>
-        <div class="chatbot-messages" id="chatbotMessages">
-            <div class="message-bubble system-bubble">Ask me about bioinformatics, protein structures, drug discovery, or how to use this platform.</div>
-        </div>
-        <div class="chatbot-input-area">
-            <input type="text" id="chatbotInput" placeholder="Type your question...">
-            <button id="chatbotSendBtn"><i class="fas fa-paper-plane"></i></button>
-        </div>
+        <div class="chatbot-header"><span><i class="fas fa-robot"></i> BioWeb3 AI</span><button id="closeChatbotBtn">&times;</button></div>
+        <div class="chatbot-messages" id="chatbotMessages"><div class="message-bubble system-bubble">Ask me about bioinformatics, protein structures, drug discovery, or how to use this platform.</div></div>
+        <div class="chatbot-input-area"><input type="text" id="chatbotInput" placeholder="Type your question..."><button id="chatbotSendBtn"><i class="fas fa-paper-plane"></i></button></div>
     </div>
 </div>
 
