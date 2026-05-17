@@ -222,18 +222,116 @@ async function recordCurrent() {
 }
 
 // ========== SEQUENCE ANALYSIS ==========
+// ========== ENHANCED SEQUENCE ANALYSIS (with all improvements) ==========
 async function analyzeSeq() {
     let seq = document.getElementById('seqInput').value.trim();
-    if (!seq) { alert("Paste a sequence"); return; }
-    let rev = bio.reverseComplement(seq);
-    let gc = bio.gcContent(seq);
-    document.getElementById('seqResult').innerHTML = `<strong>Analysis</strong><br>Length: ${seq.length}<br>GC%: ${gc}%`;
+    if (!seq) { alert("Paste a DNA/RNA/protein sequence"); return; }
+    seq = seq.toUpperCase();
+
+    // Basic statistics
+    const rev = bio.reverseComplement(seq);
+    const gc = bio.gcContent(seq);
+    const length = seq.length;
+
+    // ---------- 1. DNA Classification (heuristic) ----------
+    const classification = await classifyDNASequence(seq);
+
+    // ---------- 2. Compressibility estimation (repetitiveness) ----------
+    const compressibility = estimateCompressibility(seq);
+
+    // ---------- 3. Quality score (GC% + homopolymer + ambiguous bases) ----------
+    const quality = sequenceQualityScore(seq);
+    const maxRun = Math.max(...(seq.match(/([ATCG])\1*/gi) || []).map(run => run.length));
+
+    // ---------- 4. Blockchain hash recording ----------
+    const hash = await sha256(seq);
+    addRecord("DNA Sequence Analysis", `Length: ${length}, GC%: ${gc}%, Hash: ${hash.slice(0,16)}...`, 5);
+
+    // Update the result box
+    document.getElementById('seqResult').innerHTML = `
+        <strong>Analysis</strong><br>
+        Length: ${length}<br>
+        GC%: ${gc}%<br>
+        <strong>Predicted type:</strong> ${classification.classification} (confidence: ${(classification.confidence*100).toFixed(0)}%)<br>
+        Estimated compressibility: ${(compressibility*100).toFixed(1)}% (higher = more repeats)<br>
+        Quality score: ${quality}/100<br>
+        <small>GC% = ${classification.gcPercent.toFixed(1)}%, max homopolymer run = ${maxRun}</small>
+    `;
     document.getElementById('revCompDisplay').innerHTML = `<strong>Reverse complement</strong><br><pre>${rev}</pre>`;
     document.getElementById('seqResult').style.display = 'block';
+
+    // Update global stats and save profile
     analysisCount++;
     document.getElementById('analyses').innerText = analysisCount;
-    addRecord("Sequence analysis", `GC=${gc}%`, 5);
     saveUserProfile();
+
+    // Optional: show a notification that hash was recorded
+    cm.showNotification(`Sequence analysis recorded on blockchain (hash: ${hash.slice(0,8)}...)`);
+}
+
+// ---------- Helper functions (place after analyzeSeq) ----------
+async function classifyDNASequence(seq) {
+    const length = seq.length;
+    const gcCount = (seq.match(/[GC]/g) || []).length;
+    const gcPercent = (gcCount / length) * 100;
+    let classification = "Unknown";
+    let confidence = 0;
+
+    if (gcPercent > 35 && gcPercent < 45 && length > 50000) {
+        classification = "Human / Mammalian genome fragment";
+        confidence = 0.65;
+    } else if (gcPercent > 50 && length < 10000) {
+        classification = "Bacterial or viral sequence";
+        confidence = 0.70;
+    } else if (gcPercent > 28 && gcPercent < 36 && length > 10000) {
+        classification = "Plant or fungal DNA";
+        confidence = 0.60;
+    } else if (length > 1000) {
+        classification = "Eukaryotic genomic fragment";
+        confidence = 0.55;
+    } else if (length < 200 && /^[ATCG]+$/i.test(seq)) {
+        classification = "Short oligo or primer";
+        confidence = 0.80;
+    }
+    if (seq.slice(-20).match(/A{10,}|T{10,}/)) {
+        classification += " (possible cDNA)";
+    }
+    return { classification, confidence, gcPercent, length };
+}
+
+function estimateCompressibility(seq) {
+    const len = seq.length;
+    if (len === 0) return 0;
+    // Use unique 4‑mers as a proxy for complexity
+    const tetramers = new Set();
+    for (let i = 0; i <= len - 4; i++) {
+        tetramers.add(seq.substr(i, 4));
+    }
+    const complexity = tetramers.size / Math.max(1, len - 3);
+    // compressibility = 1 - complexity (simpler sequences compress better)
+    return Math.min(0.95, Math.max(0, 1 - complexity));
+}
+
+function sequenceQualityScore(seq) {
+    let score = 100;
+    const gc = (seq.match(/[GC]/gi) || []).length / seq.length * 100;
+    if (gc < 20 || gc > 80) score -= 20;
+    const runs = seq.match(/([ATCG])\1*/gi) || [];
+    const maxRun = Math.max(...runs.map(run => run.length));
+    if (maxRun > 10) score -= 10;
+    if (maxRun > 20) score -= 15;
+    const ambig = (seq.match(/[^ATCG]/gi) || []).length;
+    if (ambig > 0) score -= Math.min(30, ambig / seq.length * 100);
+    return Math.max(0, Math.min(100, score));
+}
+
+// SHA‑256 helper (already needed for blockchain)
+async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 }
 
 // ========== UNIPROT SEARCH ==========
