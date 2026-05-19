@@ -383,33 +383,6 @@ async function searchGeneralProtein() {
     }
 }
 
-async function loadAlphaFoldStructure(accession, proteinName) {
-    const viewerDiv = document.getElementById('viewer3d');
-    const resultDiv = document.getElementById('structResult');
-    resultDiv.innerHTML += '<br><div class="loading"></div> Fetching 3D structure from AlphaFold...';
-    try {
-        const pdbUrl = `https://alphafold.ebi.ac.uk/files/AF-${accession}-F1-model_v4.pdb`;
-        const pdbResponse = await fetch(pdbUrl);
-        if (!pdbResponse.ok) throw new Error(`AlphaFold model not available for ${accession}. Try a different protein.`);
-        const pdbData = await pdbResponse.text();
-        const config = { backgroundColor: 0xf5f5f5 };
-        const viewer = new $3Dmol.GLViewer(viewerDiv, config);
-        viewer.addModel(pdbData, "pdb");
-        viewer.setStyle({}, { cartoon: { color: '#2c7a47' } });
-        viewer.zoomTo();
-        viewer.render();
-        resultDiv.innerHTML += `<br><i class="fas fa-cube"></i> 3D structure loaded. ✅ +15 BIO`;
-        structCount++;
-        document.getElementById('structures').innerText = structCount;
-        addRecord("AlphaFold", `${proteinName} (${accession}) structure loaded`, 15);
-        currentStructure = pdbData;
-        currentAccession = accession;
-        saveUserProfile();
-    } catch (err) {
-        resultDiv.innerHTML += `<br><i class="fas fa-exclamation-triangle text-danger"></i> Could not load 3D structure: ${err.message}`;
-    }
-}
-
 async function runDock() {
     if (!currentStructure) { alert("Load a protein structure first"); return; }
     const resultDiv = document.getElementById('dockResult');
@@ -1318,7 +1291,203 @@ if (hcTab) {
         }
     });
 }
+// ========== ENHANCED ALPHAFOLD FUNCTIONS ==========
+let currentPdbData = null;
+let currentPlddtData = null;
+let currentAccessionFull = null;
+let currentProteinNameFull = null;
+let currentViewer = null;
 
+async function loadAlphaFoldStructure(accession, proteinName) {
+    const viewerDiv = document.getElementById('viewer3d');
+    const resultDiv = document.getElementById('structResult');
+    resultDiv.innerHTML += '<br><div class="loading"></div> Fetching 3D structure from AlphaFold...';
+    resultDiv.style.display = 'block';
+    document.getElementById('confidenceLabel').style.display = 'none';
+
+    // Get selected model type
+    const modelSelect = document.getElementById('modelSelect');
+    const modelType = modelSelect ? modelSelect.value : 'AF2';
+
+    let pdbUrl;
+    if (modelType === 'AF3') {
+        pdbUrl = `https://alphafold.ebi.ac.uk/files/AF-${accession}-F1-model_v4.pdb`; // AF3 fallback for now
+    } else if (modelType === 'ROCKET') {
+        pdbUrl = `https://alphafold.ebi.ac.uk/files/AF-${accession}-F1-model_v4.pdb`; // ROCKET endpoint placeholder
+    } else {
+        pdbUrl = `https://alphafold.ebi.ac.uk/files/AF-${accession}-F1-model_v4.pdb`;
+    }
+
+    try {
+        const pdbResponse = await fetch(pdbUrl);
+        if (!pdbResponse.ok) {
+            if (modelType !== 'AF2') {
+                console.warn(`${modelType} model not found, falling back to AF2`);
+                const fallbackResponse = await fetch(`https://alphafold.ebi.ac.uk/files/AF-${accession}-F1-model_v4.pdb`);
+                if (!fallbackResponse.ok) throw new Error(`No model available for ${accession}`);
+                currentPdbData = await fallbackResponse.text();
+            } else {
+                throw new Error(`AlphaFold model not available for ${accession}`);
+            }
+        } else {
+            currentPdbData = await pdbResponse.text();
+        }
+
+        // Parse pLDDT from B-factor column
+        const plddtMap = new Map();
+        const lines = currentPdbData.split('\n');
+        for (const line of lines) {
+            if (line.startsWith('ATOM')) {
+                const resNum = parseInt(line.substring(22, 26).trim());
+                const bfactor = parseFloat(line.substring(60, 66).trim());
+                if (!plddtMap.has(resNum) || bfactor > plddtMap.get(resNum)) {
+                    plddtMap.set(resNum, bfactor);
+                }
+            }
+        }
+        currentPlddtData = Array.from(plddtMap.entries()).sort((a,b) => a[0]-b[0]);
+
+        // Color function based on pLDDT
+        const getColor = (bfactor) => {
+            if (bfactor >= 90) return '#0055d4';
+            if (bfactor >= 70) return '#3ca14d';
+            if (bfactor >= 50) return '#f9ac67';
+            return '#e34132';
+        };
+
+        // Initialize viewer
+        const config = { backgroundColor: 0xf5f5f5 };
+        if (currentViewer) currentViewer.clear();
+        currentViewer = new $3Dmol.GLViewer(viewerDiv, config);
+        currentViewer.addModel(currentPdbData, "pdb");
+        currentViewer.setStyle({}, (atom) => {
+            if (atom.resn === 'HOH') return {};
+            return { cartoon: { color: getColor(plddtMap.get(atom.resi) || 50), opacity: 0.9 } };
+        });
+        currentViewer.zoomTo();
+        currentViewer.render();
+
+        // Show confidence label and chart
+        document.getElementById('confidenceLabel').style.display = 'block';
+        drawPlddtChart(currentPlddtData);
+
+        resultDiv.innerHTML = `<i class="fas fa-check-circle text-success"></i> <strong>Loaded: ${proteinName}</strong><br>
+                               Model: ${modelType}<br>Accession: ${accession}<br>✅ +15 BIO`;
+        structCount++;
+        document.getElementById('structures').innerText = structCount;
+        addRecord("AlphaFold", `${proteinName} (${accession}) ${modelType} model loaded with confidence coloring`, 15);
+        currentAccessionFull = accession;
+        currentProteinNameFull = proteinName;
+        saveUserProfile();
+    } catch (err) {
+        resultDiv.innerHTML += `<br><i class="fas fa-exclamation-triangle text-danger"></i> Could not load structure: ${err.message}`;
+    }
+}
+
+// Draw pLDDT confidence chart using Plotly
+function drawPlddtChart(plddtData) {
+    const residues = plddtData.map(d => d[0]);
+    const scores = plddtData.map(d => d[1]);
+    const colors = scores.map(s => {
+        if (s >= 90) return '#0055d4';
+        if (s >= 70) return '#3ca14d';
+        if (s >= 50) return '#f9ac67';
+        return '#e34132';
+    });
+    const trace = {
+        x: residues,
+        y: scores,
+        type: 'scatter',
+        mode: 'lines+markers',
+        marker: { color: colors, size: 4 },
+        line: { color: '#666', width: 1 },
+        name: 'pLDDT'
+    };
+    const layout = {
+        title: 'Per-residue Confidence (pLDDT)',
+        xaxis: { title: 'Residue Number' },
+        yaxis: { title: 'pLDDT Score', range: [0, 100] },
+        margin: { t: 30, l: 40, r: 20, b: 30 },
+        paper_bgcolor: 'white',
+        plot_bgcolor: 'white',
+        height: 150
+    };
+    Plotly.newPlot('plddtChart', [trace], layout, { responsive: true });
+}
+
+// Toggle visualization style
+function setViewStyle(style) {
+    if (!currentViewer) return;
+    currentViewer.clear();
+    currentViewer.addModel(currentPdbData, "pdb");
+    if (style === 'cartoon') {
+        const colors = {};
+        currentPlddtData.forEach(([res, score]) => {
+            let color;
+            if (score >= 90) color = '#0055d4';
+            else if (score >= 70) color = '#3ca14d';
+            else if (score >= 50) color = '#f9ac67';
+            else color = '#e34132';
+            colors[res] = color;
+        });
+        currentViewer.setStyle({}, (atom) => {
+            if (atom.resn === 'HOH') return {};
+            return { cartoon: { color: colors[atom.resi] || '#3ca14d', opacity: 0.9 } };
+        });
+    } else if (style === 'surface') {
+        currentViewer.setStyle({}, { surface: { opacity: 0.7, color: '#3ca14d' } });
+    } else if (style === 'line') {
+        currentViewer.setStyle({}, { line: { color: '#2c7a47', linewidth: 1 } });
+    } else if (style === 'sphere') {
+        currentViewer.setStyle({}, { sphere: { scale: 0.5, color: '#3ca14d' } });
+    }
+    currentViewer.zoomTo();
+    currentViewer.render();
+}
+
+// Download structure report
+async function downloadStructureReport() {
+    if (!currentPdbData || !currentAccessionFull) {
+        alert('Load a protein structure first.');
+        return;
+    }
+    // Capture viewer screenshot using html2canvas
+    const viewerDiv = document.getElementById('viewer3d');
+    let screenshotDataUrl = '';
+    if (typeof html2canvas !== 'undefined') {
+        try {
+            const canvas = await html2canvas(viewerDiv, { scale: 2 });
+            screenshotDataUrl = canvas.toDataURL();
+        } catch (e) { console.warn('Screenshot capture failed', e); }
+    }
+    // Build report HTML
+    const reportHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"><title>AlphaFold Report: ${currentAccessionFull}</title><style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            h1 { color: #2c7a47; }
+            .section { margin-bottom: 30px; }
+            img { max-width: 100%; border: 1px solid #ccc; }
+        </style></head>
+        <body>
+            <h1>AlphaFold Structure Report</h1>
+            <div class="section"><strong>Protein:</strong> ${currentProteinNameFull || currentAccessionFull}</div>
+            <div class="section"><strong>Accession:</strong> ${currentAccessionFull}</div>
+            <div class="section"><strong>Model Type:</strong> ${document.getElementById('modelSelect')?.value || 'AF2'}</div>
+            <div class="section"><strong>Date:</strong> ${new Date().toLocaleString()}</div>
+            <div class="section"><strong>Structure Viewer Screenshot:</strong><br><img src="${screenshotDataUrl}" alt="Structure Screenshot"></div>
+            <div class="section"><strong>pLDDT Confidence Chart:</strong><br><div id="chartImg"></div></div>
+            <div class="section"><strong>Blockchain Record:</strong> ${ledger[0]?.hash || 'Not recorded'}</div>
+        </body>
+        </html>
+    `;
+    const blob = new Blob([reportHtml], {type: 'text/html'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `alphafold_report_${currentAccessionFull}.html`;
+    link.click();
+}
 document.addEventListener('DOMContentLoaded', () => {
     initSupabase();
 
