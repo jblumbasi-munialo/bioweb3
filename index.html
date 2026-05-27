@@ -490,6 +490,51 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/security.js"></script>
-<script src="js/bio-core.js"></script>
+
+<!-- ========== CORE MODULES (Always Loaded) ========== -->
+<script src="js/bio-utils.js"></script>
+<script src="js/bio-config.js"></script>
+<script src="js/bio-state.js"></script>
+<script src="js/bio-wallet.js"></script>
+<script src="js/bio-profile.js"></script>
+<script src="js/bio-chatbot.js"></script>
+
+<!-- ========== LAZY LOADER ========== -->
+<script src="js/bio-loader.js"></script>
+
+<!-- ========== INITIALIZATION ========== -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    initSupabase();
+    
+    const walletBtn = document.getElementById('connectWallet');
+    if (walletBtn) walletBtn.addEventListener('click', connectWallet);
+    
+    cm.loadConfig();
+    
+    if (document.getElementById('dockChart')) {
+        Plotly.newPlot('dockChart', [{ x: [], y: [] }], { title: 'Docking results will appear here', paper_bgcolor: 'white' });
+    }
+    
+    setupChatbotEvents();
+    
+    const profileTab = document.querySelector('#mainTab button[data-bs-target="#profile"]');
+    if (profileTab) profileTab.addEventListener('shown.bs.tab', () => displayProfile());
+    
+    const savedAddress = Object.keys(localStorage).find(k => k.startsWith('profile_'));
+    if (savedAddress) {
+        const profile = JSON.parse(localStorage.getItem(savedAddress) || '{}');
+        if (profile.bio_balance) {
+            tokenBalance = profile.bio_balance;
+            document.getElementById('tokens').innerText = tokenBalance;
+        }
+    }
+    
+    const optInBtn = document.getElementById('optInBtn');
+    if (optInBtn) optInBtn.addEventListener('click', optInAndShare);
+    
+    loadAggregatedData();
+});
+</script>
 </body>
 </html>
