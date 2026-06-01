@@ -19,20 +19,22 @@ const featureModules = {
     'researchAgg': { script: 'js/bio-researchagg.js', loaded: false }
 };
 
-function loadFeatureModule(tabId) {
+async function loadFeatureModule(tabId) {
     const feature = featureModules[tabId];
     if (!feature || feature.loaded) return;
 
-    const script = document.createElement('script');
-    script.src = feature.script;
-    script.onload = () => {
+    try {
+        // Convert file path to ES6 module path (remove .js and convert to import path)
+        const modulePath = feature.script.startsWith('./') ? feature.script : `./${feature.script}`;
+        const module = await import(modulePath);
         feature.loaded = true;
         console.log(`✅ Feature loaded: ${tabId}`);
-    };
-    script.onerror = () => {
-        console.warn(`⚠️ Failed to load feature: ${tabId} from ${feature.script}`);
-    };
-    document.head.appendChild(script);
+        return module;
+    } catch (error) {
+        console.warn(`⚠️ Failed to load feature: ${tabId} from ${feature.script}`, error);
+        feature.loaded = false; // Allow retry on error
+        throw error; // Re-throw for caller to handle if needed
+    }
 }
 
 // Hook into Bootstrap tab events for lazy loading
@@ -42,16 +44,21 @@ document.addEventListener('DOMContentLoaded', () => {
         mainTab.addEventListener('show.bs.tab', (event) => {
             const tabId = event.target.getAttribute('data-bs-target')?.substring(1);
             if (tabId && featureModules[tabId]) {
-                loadFeatureModule(tabId);
+                // Call async function but don't wait - allows UI to remain responsive
+                loadFeatureModule(tabId).catch(error => {
+                    console.error(`Error loading feature ${tabId}:`, error);
+                });
             }
         });
     }
 });
 
-function preloadFeatures(tabIds) {
-    tabIds.forEach(tabId => {
-        if (featureModules[tabId]) {
-            loadFeatureModule(tabId);
-        }
-    });
+async function preloadFeatures(tabIds) {
+    const loadPromises = tabIds
+        .filter(tabId => featureModules[tabId])
+        .map(tabId => loadFeatureModule(tabId).catch(error => {
+            console.error(`Error preloading feature ${tabId}:`, error);
+        }));
+    
+    await Promise.all(loadPromises);
 }

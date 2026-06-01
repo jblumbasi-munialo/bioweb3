@@ -1,0 +1,132 @@
+{
+  "name": "BioWeb3 - Bioinformatics Platform",
+  "short_name": "BioWeb3",
+  "description": "Integrated bioinformatics platform with blockchain, AlphaFold integration, and advanced analytics",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#1f77b4",
+  "categories": ["science", "productivity"],
+  "screenshots": [
+    {
+      "src": "./images/screenshot-1.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "./images/screenshot-2.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "icons": [
+    {
+      "src": "./images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./images/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./images/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Sequence Analysis",
+      "short_name": "Sequence",
+      "description": "Analyze DNA and protein sequences",
+      "url": "./index.html?tab=Sequence",
+      "icons": [
+        {
+          "src": "./images/icon-sequence.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "AlphaFold Prediction",
+      "short_name": "AlphaFold",
+      "description": "Predict protein structures",
+      "url": "./index.html?tab=AlphaFold",
+      "icons": [
+        {
+          "src": "./images/icon-alphafold.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Drug Discovery",
+      "short_name": "Drug Discovery",
+      "description": "Molecular docking and drug screening",
+      "url": "./index.html?tab=Drug",
+      "icons": [
+        {
+          "src": "./images/icon-drug.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Blockchain Ledger",
+      "short_name": "Ledger",
+      "description": "View blockchain transaction history",
+      "url": "./index.html?tab=Blockchain",
+      "icons": [
+        {
+          "src": "./images/icon-blockchain.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "./share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "file",
+          "accept": [".fasta", ".fa", ".seq", ".txt"]
+        }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "./open-sequence",
+      "accept": {
+        "text/fasta": [".fasta", ".fa"]
+      }
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": []
+}
