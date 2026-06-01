@@ -4,6 +4,7 @@ package-lock.json
 yarn.lock
 
 # Build outputs
+public/
 dist/
 build/
 *.bundle.js

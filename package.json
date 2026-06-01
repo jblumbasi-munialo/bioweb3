@@ -8,9 +8,9 @@
     "build": "webpack --mode production --env NODE_ENV=production",
     "build:dev": "webpack --mode development --env NODE_ENV=development",
     "build:staging": "webpack --mode production --env NODE_ENV=production --env REACT_APP_ENVIRONMENT=staging",
-    "analyze": "webpack-bundle-analyzer dist/core/stats.json dist/features/stats.json",
-    "serve": "http-server dist -p 8080 -c-1",
-    "clean": "rimraf dist",
+    "analyze": "webpack-bundle-analyzer public/core/stats.json public/features/stats.json",
+    "serve": "http-server public -p 8080 -c-1",
+    "clean": "rimraf public",
     "lint": "eslint js/ --ext .js",
     "format": "prettier --write \"js/**/*.js\""
   },

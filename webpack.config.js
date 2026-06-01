@@ -41,7 +41,7 @@ const commonConfig = {
   context: path.resolve(__dirname),
   devtool: isDevelopment ? 'source-map' : 'source-map',
   output: {
-    path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, 'public'),
     filename: '[name].bundle.js',
     chunkFilename: '[name].chunk.js',
     libraryTarget: 'umd',
@@ -80,11 +80,11 @@ const commonConfig = {
     }),
     new CopyPlugin({
       patterns: [
-        { from: 'index.html', to: path.resolve(__dirname, 'dist') },
-        { from: 'service-worker.js', to: path.resolve(__dirname, 'dist') },
-        { from: 'manifest.json', to: path.resolve(__dirname, 'dist'), noErrorOnMissing: true },
-        { from: 'css', to: path.resolve(__dirname, 'dist/css'), noErrorOnMissing: true },
-        { from: 'data', to: path.resolve(__dirname, 'dist/data'), noErrorOnMissing: true },
+        { from: 'index.html', to: path.resolve(__dirname, 'public') },
+        { from: 'service-worker.js', to: path.resolve(__dirname, 'public') },
+        { from: 'manifest.json', to: path.resolve(__dirname, 'public'), noErrorOnMissing: true },
+        { from: 'css', to: path.resolve(__dirname, 'public/css'), noErrorOnMissing: true },
+        { from: 'data', to: path.resolve(__dirname, 'public/data'), noErrorOnMissing: true },
       ],
     }),
   ],
@@ -116,7 +116,7 @@ const coreConfig = {
   entry: coreModules,
   output: {
     ...commonConfig.output,
-    path: path.resolve(__dirname, 'dist/core'),
+    path: path.resolve(__dirname, 'public/core'),
   },
 };
 
@@ -127,7 +127,7 @@ const featuresConfig = {
   entry: featureModules,
   output: {
     ...commonConfig.output,
-    path: path.resolve(__dirname, 'dist/features'),
+    path: path.resolve(__dirname, 'public/features'),
   },
   externals: {
     // Assume core modules are globally available
