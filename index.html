@@ -2,6 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1f77b4">
+    <meta name="description" content="BioWeb3: AI-Powered Drug Discovery + Blockchain Platform">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/png" href="./images/icon-192.png">
+    <link rel="apple-touch-icon" href="./images/icon-192.png">
     <title>BioWeb3 | AI‑Powered Drug Discovery + Blockchain</title>
     <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-3.0.1.min.js"></script>
@@ -66,12 +72,12 @@
     </div>
 
     <ul class="nav nav-tabs" id="mainTab">
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile">👤 Profile & Login</button></li>
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#seq">🧬 Sequence</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#structure">🧬 AlphaFold</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#docking">🔬 Docking</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#blockchain">🔗 Blockchain</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pricing">💰 Pricing (KES)</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile">👤 Profile</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#bioimaging">🔬 Bioimaging</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#crispr">✂️ CRISPR</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#drugdiscovery">💊 Drug Disc.</button></li>
@@ -86,7 +92,7 @@
 
     <div class="tab-content">
         <!-- ========== SEQUENCE TAB (enhanced, but minimal changes) ========== -->
-        <div class="tab-pane fade show active" id="seq">
+        <div class="tab-pane fade" id="seq">
             <div class="row">
                 <div class="col-md-6">
                     <div class="card">
@@ -203,7 +209,7 @@
         </div>
 
         <!-- ========== PROFILE TAB (unchanged) ========== -->
-        <div class="tab-pane fade" id="profile">
+        <div class="tab-pane fade show active" id="profile">
             <div class="card">
                 <div class="card-header"><i class="fas fa-user-circle"></i> Your BioWeb3 Profile</div>
                 <div class="card-body">
@@ -504,6 +510,14 @@
 
 <!-- ========== LAZY LOADER ========== -->
 <script src="js/bio-loader.js"></script>
+<script src="js/bio-sw-manager.js"></script>
+
+<!-- ========== PHASE 3 BLOCKCHAIN MODULES ========== -->
+<script src="js/bio-ledger-db.js"></script>
+<script src="js/bio-ledger-sync.js"></script>
+<script src="js/bio-tx-analytics.js"></script>
+<script src="js/bio-wallet-advanced.js"></script>
+<script src="js/bio-phase3-manager.js"></script>
 
 <!-- ========== INITIALIZATION ========== -->
 <script>
