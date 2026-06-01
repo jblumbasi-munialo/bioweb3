@@ -19,6 +19,16 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
+        /* Profile Modal */
+        .profile-modal { position: fixed; top: 80px; right: 20px; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); padding: 20px; width: 320px; z-index: 999; display: none; }
+        .profile-modal.show { display: block; }
+        .profile-modal-close { position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 20px; cursor: pointer; color: #666; }
+        .profile-modal h5 { margin-bottom: 15px; font-weight: bold; }
+        .profile-modal .form-group { margin-bottom: 12px; }
+        .profile-modal .form-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+        .profile-modal .form-group input { width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+        .profile-modal .btn { width: 100%; margin-top: 10px; }
+        
         /* Floating Chatbot (unchanged) */
         .chatbot-float { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
         .chatbot-toggle { background: linear-gradient(135deg, #2c7a47, #1e5a34); border: none; border-radius: 50px; padding: 12px 24px; color: white; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.3s ease; }
@@ -44,9 +54,30 @@
 <nav class="navbar navbar-expand-lg fixed-top">
     <div class="container">
         <a class="navbar-brand" href="#"><i class="fas fa-dna"></i> BioWeb3</a>
+        <button class="btn btn-outline-light me-2" onclick="toggleProfileModal()"><i class="fas fa-user-circle"></i> Profile</button>
         <button id="connectWallet" class="btn btn-outline-light"><i class="fas fa-wallet"></i> Connect Wallet</button>
     </div>
 </nav>
+
+<!-- Profile Modal Popup -->
+<div class="profile-modal" id="profileModal">
+    <button class="profile-modal-close" onclick="toggleProfileModal()">✕</button>
+    <h5><i class="fas fa-user-circle"></i> Your Profile</h5>
+    <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="profileEmail" class="form-control" placeholder="Enter your email">
+    </div>
+    <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="profileUsername" class="form-control" placeholder="Enter username">
+    </div>
+    <div class="form-group">
+        <label>Organization</label>
+        <input type="text" id="profileOrg" class="form-control" placeholder="Organization/Institution">
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="saveUserProfile()">Save Profile</button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="toggleProfileModal()">Close</button>
+</div>
 
 <div class="container" style="margin-top: 80px;">
     <div class="text-center mb-4">
@@ -72,7 +103,6 @@
     </div>
 
     <ul class="nav nav-tabs" id="mainTab">
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile">👤 Profile & Login</button></li>
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#seq">🧬 Sequence</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#structure">🧬 AlphaFold</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#docking">🔬 Docking</button></li>
@@ -209,7 +239,7 @@
         </div>
 
         <!-- ========== PROFILE TAB (unchanged) ========== -->
-        <div class="tab-pane fade show active" id="profile">
+        <div class="tab-pane fade" id="profile">
             <div class="card">
                 <div class="card-header"><i class="fas fa-user-circle"></i> Your BioWeb3 Profile</div>
                 <div class="card-body">
@@ -551,6 +581,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (optInBtn) optInBtn.addEventListener('click', optInAndShare);
     
     loadAggregatedData();
+});
+
+// Profile Modal Toggle
+function toggleProfileModal() {
+    const modal = document.getElementById('profileModal');
+    if (modal) {
+        modal.classList.toggle('show');
+    }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('profileModal');
+    if (modal && !modal.contains(event.target) && event.target.id !== 'profileBtn') {
+        modal.classList.remove('show');
+    }
 });
 </script>
 </body>
