@@ -3,6 +3,7 @@ const webpack = require('webpack');
 const TerserPlugin = require('terser-webpack-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production';
@@ -76,6 +77,15 @@ const commonConfig = {
       'process.env.REACT_APP_ENVIRONMENT': JSON.stringify(
         process.env.REACT_APP_ENVIRONMENT || 'development'
       ),
+    }),
+    new CopyPlugin({
+      patterns: [
+        { from: 'index.html', to: path.resolve(__dirname, 'dist') },
+        { from: 'service-worker.js', to: path.resolve(__dirname, 'dist') },
+        { from: 'manifest.json', to: path.resolve(__dirname, 'dist'), noErrorOnMissing: true },
+        { from: 'css', to: path.resolve(__dirname, 'dist/css'), noErrorOnMissing: true },
+        { from: 'data', to: path.resolve(__dirname, 'dist/data'), noErrorOnMissing: true },
+      ],
     }),
   ],
   optimization: {
