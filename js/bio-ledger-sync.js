@@ -388,6 +388,8 @@ class LedgerSync {
     }
 }
 
+window.LedgerSync = LedgerSync;
+
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { LedgerSync };

@@ -500,6 +500,9 @@ async function initLedgerDatabase(dbName = 'BioWeb3Ledger') {
     return ledgerDB;
 }
 
+window.LedgerDatabase = LedgerDatabase;
+window.initLedgerDatabase = initLedgerDatabase;
+
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { LedgerDatabase, initLedgerDatabase };

@@ -98,6 +98,19 @@ class Phase3Manager {
      */
     async loadModule(moduleName) {
         try {
+            const browserExports = {
+                'bio-ledger-db.js': ['LedgerDatabase', 'initLedgerDatabase'],
+                'bio-network-manager.js': ['NetworkManager'],
+                'bio-token-manager.js': ['TokenManager'],
+                'bio-ledger-sync.js': ['LedgerSync'],
+                'bio-tx-analytics.js': ['TransactionAnalytics'],
+                'bio-wallet-advanced.js': ['AdvancedWalletManager']
+            };
+            const exportedNames = browserExports[moduleName] || [];
+            if (exportedNames.every(name => typeof window[name] === 'function')) {
+                return Object.fromEntries(exportedNames.map(name => [name, window[name]]));
+            }
+
             // Check if already loaded in window
             const componentName = moduleName.replace(/\.js$/, '');
             if (window[componentName]) {

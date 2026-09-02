@@ -14,19 +14,6 @@ class ContentManager {
             this.config = { drugs: {}, exchangeRate: 130 };
         }
 
-        try {
-            const fx = await fetch('https://api.frankfurter.app/latest?from=USD&to=KES');
-            if (fx.ok) {
-                const fxData = await fx.json();
-                if (fxData.rates && fxData.rates.KES) {
-                    this.config.exchangeRate = fxData.rates.KES;
-                    console.log(`✅ Live KES rate: ${this.config.exchangeRate.toFixed(2)}`);
-                }
-            }
-        } catch (err) {
-            console.warn('FX API unavailable, using config rate:', this.config.exchangeRate);
-        }
-
         this.applyPrices();
     }
 

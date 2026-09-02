@@ -503,6 +503,8 @@ class TransactionAnalytics {
     }
 }
 
+window.TransactionAnalytics = TransactionAnalytics;
+
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { TransactionAnalytics };

@@ -83,6 +83,7 @@ const commonConfig = {
         { from: 'index.html', to: path.resolve(__dirname, 'public') },
         { from: 'service-worker.js', to: path.resolve(__dirname, 'public') },
         { from: 'manifest.json', to: path.resolve(__dirname, 'public'), noErrorOnMissing: true },
+        { from: 'features.json', to: path.resolve(__dirname, 'public'), noErrorOnMissing: true },
         { from: 'js', to: path.resolve(__dirname, 'public/js'), noErrorOnMissing: true },
         { from: 'css', to: path.resolve(__dirname, 'public/css'), noErrorOnMissing: true },
         { from: 'data', to: path.resolve(__dirname, 'public/data'), noErrorOnMissing: true },

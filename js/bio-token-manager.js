@@ -387,6 +387,9 @@ function initTokenManager(contractManager, networkManager) {
     return tokenManager;
 }
 
+window.TokenManager = TokenManager;
+window.initTokenManager = initTokenManager;
+
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { TokenManager, initTokenManager };

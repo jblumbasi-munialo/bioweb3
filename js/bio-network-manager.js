@@ -307,6 +307,8 @@ class NetworkManager {
 // Create global instance
 let networkManager = new NetworkManager();
 
+window.NetworkManager = NetworkManager;
+
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { NetworkManager };
