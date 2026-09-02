@@ -711,7 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const optInBtn = document.getElementById('optInBtn');
     if (optInBtn) optInBtn.addEventListener('click', optInAndShare);
     
-    loadAggregatedData();
+    if (typeof loadAggregatedData === 'function') loadAggregatedData();
 });
 
 // Profile Modal Toggle
