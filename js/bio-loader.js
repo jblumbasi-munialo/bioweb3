@@ -25,7 +25,8 @@ async function loadFeatureModule(tabId) {
 
     try {
         // Convert file path to ES6 module path (remove .js and convert to import path)
-        const modulePath = feature.script.startsWith('./') ? feature.script : `./${feature.script}`;
+        const moduleName = feature.script.replace(/^\.\/js\//, '').replace(/^js\//, '');
+        const modulePath = `./${moduleName}`;
         const module = await import(modulePath);
         feature.loaded = true;
         console.log(`✅ Feature loaded: ${tabId}`);

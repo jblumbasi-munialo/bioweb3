@@ -105,7 +105,7 @@ class Phase3Manager {
             }
 
             // Try to load via dynamic import
-            const module = await import(`./js/${moduleName}`);
+            const module = await import(`./${moduleName}`);
             return module;
         } catch (error) {
             console.warn(`Failed to dynamically load ${moduleName}:`, error);
