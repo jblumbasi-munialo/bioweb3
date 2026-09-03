@@ -39,44 +39,64 @@
 
     window.optInAndShare = async function optInAndShare() {
         const status = document.getElementById('aggStatus');
-        if (!window.account) {
+        const button = document.getElementById('optInBtn');
+        const walletAccount = typeof account !== 'undefined' ? account : null;
+        const database = typeof supabaseClient !== 'undefined' ? supabaseClient : null;
+        if (!walletAccount) {
             setStatus(status, 'Connect your wallet first.', 'warning');
             return;
         }
-        if (!window.supabaseClient) {
+        if (!database) {
             setStatus(status, 'Secure data sharing is not configured.', 'warning');
             return;
         }
 
-        const { data, error } = await window.supabaseClient
-            .from('user_variants')
-            .select('chromosome')
-            .eq('wallet_address', window.account);
-        if (error || !data || data.length === 0) {
-            setStatus(status, 'No variants available to share.', 'danger');
-            return;
+        if (button) {
+            button.disabled = true;
+            button.setAttribute('aria-busy', 'true');
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Preparing secure contribution...';
         }
+        setStatus(status, 'Checking your private variant counts...', 'muted');
 
-        const counts = data.reduce((result, variant) => {
-            const chromosome = String(variant.chromosome || '').slice(0, 32);
-            if (chromosome) result[chromosome] = (result[chromosome] || 0) + 1;
-            return result;
-        }, {});
-        const { error: insertError } = await window.supabaseClient
-            .from('aggregated_counts')
-            .insert({
-                chromosome: Object.keys(counts),
-                count: Object.values(counts),
-                submitted_by: window.account
-            });
-        if (insertError) {
-            setStatus(status, 'The de-identified contribution could not be saved.', 'danger');
-            return;
-        }
+        try {
+            const { data, error } = await database
+                .from('user_variants')
+                .select('chromosome')
+                .eq('wallet_address', walletAccount);
+            if (error || !data || data.length === 0) {
+                setStatus(status, 'No variants available to share.', 'danger');
+                return;
+            }
 
-        if (typeof window.addRecord === 'function') {
-            window.addRecord('Research Contribution', 'Shared de-identified variant counts', 5);
+            const counts = data.reduce((result, variant) => {
+                const chromosome = String(variant.chromosome || '').slice(0, 32);
+                if (chromosome) result[chromosome] = (result[chromosome] || 0) + 1;
+                return result;
+            }, {});
+            const { error: insertError } = await database
+                .from('aggregated_counts')
+                .insert({
+                    chromosome: Object.keys(counts),
+                    count: Object.values(counts),
+                    submitted_by: walletAccount
+                });
+            if (insertError) {
+                setStatus(status, 'The de-identified contribution could not be saved.', 'danger');
+                return;
+            }
+
+            if (typeof addRecord === 'function') {
+                addRecord('Research Contribution', 'Shared de-identified variant counts', 5);
+            }
+            setStatus(status, 'Thank you. De-identified counts shared and +5 BIO earned.', 'success');
+        } catch (error) {
+            setStatus(status, 'Secure contribution failed. Please try again.', 'danger');
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.removeAttribute('aria-busy');
+                button.innerHTML = '<i class="fas fa-shield-alt me-1"></i> Opt In & Share My Data';
+            }
         }
-        setStatus(status, 'Thank you. De-identified counts shared and +5 BIO earned.', 'success');
     };
 })();
