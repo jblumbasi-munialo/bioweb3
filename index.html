@@ -106,12 +106,8 @@
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#seq">🧬 Sequence</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#structure">🧬 AlphaFold</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#docking">🔬 Docking</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#blockchain">🔗 Blockchain</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pricing">💰 Pricing (KES)</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#bioimaging">🔬 Bioimaging</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#crispr">✂️ CRISPR</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#drugdiscovery">💊 Drug Disc.</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#goenrichment">🧬 GO Enrichment</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#genomicviewer">🔬 Genome Viewer</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#runpipe">⚙️ Run DEG Pipeline</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#regnet">🔗 Regulatory Network</button></li>
@@ -213,31 +209,6 @@
             </div>
         </div>
 
-        <!-- ========== BLOCKCHAIN LEDGER (unchanged) ========== -->
-        <div class="tab-pane fade" id="blockchain">
-            <div class="card">
-                <div class="card-header"><i class="fas fa-link"></i> Immutable Research Ledger</div>
-                <div class="card-body">
-                    <button class="btn btn-primary mb-2" onclick="recordCurrent()">Record current result</button>
-                    <div id="ledger" style="max-height: 300px; overflow-y: auto;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========== PRICING KES (unchanged) ========== -->
-        <div class="tab-pane fade" id="pricing">
-            <div class="card">
-                <div class="card-header"><i class="fas fa-tag"></i> Drug Prices (Kenya Shillings)</div>
-                <div class="card-body">
-                    <table class="table" id="priceTable">
-                        <thead><tr><th>Drug</th><th>USD</th><th>KES</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="refreshPrices()">Refresh from config</button>
-                </div>
-            </div>
-        </div>
-
         <!-- ========== PROFILE TAB (unchanged) ========== -->
         <div class="tab-pane fade" id="profile">
             <div class="card">
@@ -247,28 +218,6 @@
                     <div id="savedItems" class="mt-3"></div>
                     <button class="btn btn-outline-danger mt-3" onclick="clearUserData()">Clear my data</button>
                     <button class="btn btn-outline-success mt-3 ms-2" onclick="saveUserProfile()">Save current data</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========== BIOIMAGING TAB (unchanged) ========== -->
-        <div class="tab-pane fade" id="bioimaging">
-            <div class="card">
-                <div class="card-header"><i class="fas fa-microscope"></i> Bioimaging Viewer (OME-Zarr)</div>
-                <div class="card-body">
-                    <p>Enter URL of OME-Zarr folder (or select demo):</p>
-                    <div class="input-group mb-3">
-                        <input type="text" id="zarrUrl" class="form-control" placeholder="https://storage.googleapis.com/viv-demo/CL.02.01.02.02.09.00_medium.zarr">
-                        <button class="btn btn-primary" onclick="loadZarr()">Load Image</button>
-                    </div>
-                    <div class="dropdown mb-3">
-                        <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Demo Datasets</button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="setZarrUrl('https://storage.googleapis.com/viv-demo/CL.02.01.02.02.09.00_medium.zarr')">Human Lung Tissue</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="setZarrUrl('https://storage.googleapis.com/viv-demo/86cbfa59-018e-4a32-832f-bd155c018154.zarr')">Mouse Kidney</a></li>
-                        </ul>
-                    </div>
-                    <div id="vizarrFrame" style="height: 600px; border: 1px solid #ddd; border-radius: 12px; overflow: hidden;"></div>
                 </div>
             </div>
         </div>
@@ -293,6 +242,8 @@
                     <ul class="nav nav-tabs" id="drugSubTab" role="tablist">
                         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#knownDrugs">📚 Known Drugs</button></li>
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#deNovo">🧠 De Novo Design</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#goenrichment">🧬 GO Enrichment</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pricing">💰 Pricing (KES)</button></li>
                     </ul>
                     <div class="tab-content mt-3">
                         <div class="tab-pane fade show active" id="knownDrugs">
@@ -321,20 +272,20 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="tab-pane fade" id="goenrichment">
+                            <button class="btn btn-primary btn-sm" onclick="loadGOData()">Load GO Results</button>
+                            <span id="goStatus" class="ms-2"></span>
+                            <div id="goTable" class="mt-2"></div>
+                            <div id="goChart" style="height: 400px; margin-top: 20px;"></div>
+                        </div>
+                        <div class="tab-pane fade" id="pricing">
+                            <table class="table" id="priceTable">
+                                <thead><tr><th>Drug</th><th>USD</th><th>KES</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="refreshPrices()">Refresh from config</button>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========== GO ENRICHMENT TAB (unchanged) ========== -->
-        <div class="tab-pane fade" id="goenrichment">
-            <div class="card">
-                <div class="card-header"><i class="fas fa-chart-pie"></i> Gene Ontology Enrichment</div>
-                <div class="card-body">
-                    <button class="btn btn-primary btn-sm" onclick="loadGOData()">Load GO Results</button>
-                    <span id="goStatus" class="ms-2"></span>
-                    <div id="goTable" class="mt-2"></div>
-                    <div id="goChart" style="height: 400px; margin-top: 20px;"></div>
                 </div>
             </div>
         </div>
@@ -352,6 +303,28 @@
                         <button class="btn btn-secondary mt-2 ms-2" onclick="loadDemoGenomic()">Load Demo (NA12878)</button>
                     </div>
                     <div id="igvContainer"></div>
+                    <ul class="nav nav-tabs mt-4" id="genomeSubTab" role="tablist">
+                        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#genomeBrowserPane">🔬 Genome Browser</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#bioimaging">🔬 Bioimaging</button></li>
+                    </ul>
+                    <div class="tab-content pt-3">
+                        <div class="tab-pane fade show active" id="genomeBrowserPane"></div>
+                        <div class="tab-pane fade" id="bioimaging">
+                            <p>Enter URL of OME-Zarr folder or select a demo dataset:</p>
+                            <div class="input-group mb-3">
+                                <input type="text" id="zarrUrl" class="form-control" placeholder="https://storage.googleapis.com/viv-demo/example.zarr">
+                                <button class="btn btn-primary" onclick="loadZarr()">Load Image</button>
+                            </div>
+                            <div class="dropdown mb-3">
+                                <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Demo Datasets</button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="setZarrUrl('https://storage.googleapis.com/viv-demo/CL.02.01.02.02.09.00_medium.zarr')">Human Lung Tissue</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="setZarrUrl('https://storage.googleapis.com/viv-demo/86cbfa59-018e-4a32-832f-bd155c018154.zarr')">Mouse Kidney</a></li>
+                                </ul>
+                            </div>
+                            <div id="vizarrFrame" style="height: 600px; border: 1px solid #ddd; border-radius: 12px; overflow: hidden;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -410,6 +383,7 @@
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#idsTab">🛡️ Intrusion Detection</button></li>
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pgxSubTab">💊 PGx Vault</button></li>
                         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#scaTab">📊 Synthetic Control Arm</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#blockchainTab">🔗 Research Ledger</button></li>
                     </ul>
                     <div class="tab-content mt-3">
                         <!-- Federated Learning sub‑tab -->
@@ -620,6 +594,12 @@
                                     <div id="scaPlot" style="height: 300px;"></div>
                                 </div>
                             </div>
+                        </div>
+                        <div class="tab-pane fade" id="blockchainTab">
+                            <h5>Immutable Research Ledger</h5>
+                            <p class="text-muted">Record the current research result in your local-first blockchain ledger.</p>
+                            <button class="btn btn-primary mb-2" onclick="recordCurrent()">Record Current Result</button>
+                            <div id="ledger" style="max-height: 300px; overflow-y: auto;"></div>
                         </div>
                     </div>
                 </div>
