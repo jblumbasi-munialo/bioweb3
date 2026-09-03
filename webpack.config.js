@@ -34,6 +34,7 @@ const featureModules = {
   'bio-degpipeline': './js/bio-degpipeline.js',
   'bio-healthcare50': './js/bio-healthcare50.js',
   'bio-researchagg': './js/bio-researchagg.js',
+  'bio-pubmed': './js/bio-pubmed.js',
 };
 
 const commonConfig = {

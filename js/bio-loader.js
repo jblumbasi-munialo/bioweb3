@@ -16,7 +16,8 @@ const featureModules = {
     'regnet': { script: 'js/bio-regnet.js', loaded: false },
     'survival': { script: 'js/bio-survival.js', loaded: false },
     'healthcare50': { script: 'js/bio-healthcare50.js', loaded: false },
-    'researchAgg': { script: 'js/bio-researchagg.js', loaded: false }
+    'researchAgg': { script: 'js/bio-researchagg.js', loaded: false },
+    'pubmed': { script: 'js/bio-pubmed.js', loaded: false }
 };
 
 async function loadFeatureModule(tabId) {
