@@ -44,7 +44,8 @@ class FederatedLearningManager:
         if not client_updates:
             return 0.0 # Return a default safe value if no updates
 
-        weighted_sum = sum(w * u for w, u in zip(self.client_weights, client_updates))
+        weights = [1 / len(client_updates)] * len(client_updates)
+        weighted_sum = sum(w * u for w, u in zip(weights, client_updates))
         # In a real FL scenario, aggregation logic would be more complex (e.g., FedAvg)
         return weighted_sum
     
@@ -67,7 +68,7 @@ def handler(request: Request):
     if request.method != 'POST':
         return Response(status=405)
     
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     # Input validation for round_num
     round_num = data.get('round', None)
@@ -75,7 +76,14 @@ def handler(request: Request):
         return Response(json.dumps({'error': 'Invalid or missing "round" parameter'}), status=400, mimetype='application/json')
 
     clients = data.get('clients', 4)
-    noise_levels = data.get('noise', [0.02, -0.01, 0.03, -0.02])[:clients]
+    if not isinstance(clients, int) or clients < 1 or clients > 32:
+        return Response(json.dumps({'error': '"clients" must be an integer between 1 and 32'}), status=400, mimetype='application/json')
+
+    noise_levels = data.get('noise', [0.02, -0.01, 0.03, -0.02])
+    if not isinstance(noise_levels, list) or len(noise_levels) != clients:
+        return Response(json.dumps({'error': '"noise" must contain one numeric update per client'}), status=400, mimetype='application/json')
+    if not all(isinstance(noise, (int, float)) and math.isfinite(noise) for noise in noise_levels):
+        return Response(json.dumps({'error': 'Client updates must be finite numbers'}), status=400, mimetype='application/json')
     
     # Base accuracy from history
     base_acc = fl_manager.accuracy_history[min(round_num, len(fl_manager.accuracy_history)-1)]
@@ -100,10 +108,10 @@ def handler(request: Request):
     if prev_acc == private_accuracy:
         convergence = 0.0 # Avoid division by zero in very specific edge case
     else:
-    convergence = fl_manager.compute_convergence_rate(private_accuracy, prev_acc)
+        convergence = fl_manager.compute_convergence_rate(private_accuracy, prev_acc)
     
     # Update privacy budget
-    privacy_remaining = fl_manager.update_privacy_budget(epsilon_per_round)
+    privacy_remaining = max(0.0, fl_manager.update_privacy_budget(epsilon_per_round))
     
     return Response(
         json.dumps({

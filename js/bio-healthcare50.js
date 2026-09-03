@@ -245,6 +245,31 @@ async function runLocalTrainingSimulation() {
     cm.showNotification('Local training simulation complete', 'success');
 }
 
+async function runCoordinatorRound() {
+    const progressEl = document.getElementById('flProgress');
+    if (!progressEl) return;
+    progressEl.innerHTML = '<span class="loading"></span> Sending synthetic client updates to the coordinator...';
+    try {
+        const response = await fetch('/api/federated_learning', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ round: 0, clients: 4, noise: [0.02, -0.01, 0.03, -0.02] })
+        });
+        if (!response.ok) throw new Error(`Coordinator returned HTTP ${response.status}`);
+        const result = await response.json();
+        progressEl.innerHTML = `
+            <div class="alert alert-success py-2 mb-0">
+                <strong>Coordinator round ${result.round} complete.</strong>
+                Accuracy ${(result.global_accuracy * 100).toFixed(2)}% ·
+                Privacy spent ε ${result.privacy_spent.toFixed(3)} ·
+                Privacy remaining ε ${result.privacy_remaining.toFixed(3)}
+            </div>`;
+        addRecord('FL coordinator', `Round ${result.round}: ${(result.global_accuracy * 100).toFixed(2)}%`, 5);
+    } catch (error) {
+        progressEl.innerHTML = `<div class="alert alert-warning py-2 mb-0">Coordinator unavailable: ${error.message}. Local simulation remains available.</div>`;
+    }
+}
+
 function getClinicalRecommendation(gene, drug, variant) {
     const normalizedGene = (gene || '').toUpperCase();
     const normalizedDrug = (drug || '').trim();
@@ -879,6 +904,7 @@ function initHealthcare50() {
     const flBtn = document.getElementById('startFLBtn');
     const simulateLocalBtn = document.getElementById('simulateLocalTrainingBtn');
     const byzantineBtn = document.getElementById('detectByzantineClientsBtn');
+    const coordinatorBtn = document.getElementById('runCoordinatorBtn');
     const idsBtn = document.getElementById('testIDSBtn');
     const exportJsonBtn = document.getElementById('exportPGxJSON');
     const exportCsvBtn = document.getElementById('exportPGxCSV');
@@ -901,6 +927,9 @@ function initHealthcare50() {
     }
     if (byzantineBtn && !byzantineBtn._init) {
         byzantineBtn.addEventListener('click', runByzantineAudit); byzantineBtn._init = true;
+    }
+    if (coordinatorBtn && !coordinatorBtn._init) {
+        coordinatorBtn.addEventListener('click', runCoordinatorRound); coordinatorBtn._init = true;
     }
     if (idsBtn && !idsBtn._init) {
         idsBtn.addEventListener('click', testIntrusionSample); idsBtn._init = true;
